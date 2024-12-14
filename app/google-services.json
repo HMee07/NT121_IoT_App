@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "71041160832",
+    "firebase_url": "https://nhom11-nt131-default-rtdb.firebaseio.com",
+    "project_id": "nhom11-nt131",
+    "storage_bucket": "nhom11-nt131.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:71041160832:android:8edd2790f1a02a95a93865",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0B0pfwMkP1PKB_Ie5kFMVcyqCZi9w14Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

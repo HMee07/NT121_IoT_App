@@ -28,30 +28,29 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 
-
-
 @Composable
 fun RadarView(
     modifier: Modifier = Modifier.size(300.dp),
+    sweepAngle: Int, // Góc quét của radar
     backgroundColor: Color = Color(0xFF00151A), // Màu nền đen pha xanh
     gridColor: Color = Color(0xFF00CFCF), // Màu lưới xanh nhạt
     sweepColor: Brush = Brush.radialGradient( // Gradient cho tia quét
         colors = listOf(Color(0xFF00CFCF).copy(alpha = 0.8f), Color.Transparent)
     )
 ) {
-    var sweepAngle by remember { mutableStateOf(0f) } // Góc quét radar
+    //var sweepAngle by remember { mutableStateOf(0f) } // Góc quét radar
     val database = FirebaseDatabase.getInstance().reference
     val radarObjects = remember { mutableStateListOf<Offset>() } // Danh sách tọa độ vật thể
 
 
 
-    // Hiệu ứng quét động
-    LaunchedEffect(Unit) {
-        while (true) {
-            sweepAngle = (sweepAngle + 2) % 360f // Tăng góc quét
-            delay(200) // Điều chỉnh tốc độ quét
-        }
-    }
+//    // Hiệu ứng quét động
+//    LaunchedEffect(Unit) {
+//        while (true) {
+//            sweepAngle = (sweepAngle + 2) % 360f // Tăng góc quét
+//            delay(200) // Điều chỉnh tốc độ quét
+//        }
+//    }
     // Đọc dữ liệu từ Firebase
     LaunchedEffect(Unit) {
         database.child("Radar").addValueEventListener(object : ValueEventListener {
@@ -155,11 +154,11 @@ fun RadarView(
             )
         }
 
-        // Vẽ tia quét
+        // Vẽ tia quét radar dựa trên sweepAngle
         drawArc(
-            brush = sweepColor, // Gradient màu xanh nhạt
-            startAngle = sweepAngle,
-            sweepAngle = 45f, // Góc quét rộng 45 độ
+            brush = sweepColor,
+            startAngle = -90f, // Tia quét bắt đầu từ phía trên
+            sweepAngle = sweepAngle.toFloat(),
             useCenter = true,
             topLeft = Offset(center.x - radius, center.y - radius),
             size = Size(radius * 2, radius * 2)

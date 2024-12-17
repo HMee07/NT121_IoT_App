@@ -38,30 +38,6 @@ fun ControlRadar(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tăng/Giảm góc
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Button(
-                onClick = { onAngleChange(selectedAngle - 1) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFC2)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("-")
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(
-                onClick = { onAngleChange(selectedAngle + 1) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFC2)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("+")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // Hiển thị góc hiện tại
         Text(
             text = "Góc hiện tại: $selectedAngle°",

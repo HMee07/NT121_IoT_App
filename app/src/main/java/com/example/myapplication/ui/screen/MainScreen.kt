@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screen
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,8 +22,12 @@ import com.example.myapplication.R
 import com.example.myapplication.ui.component.DrawingArea
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -88,4 +93,30 @@ fun MainScreen(navController: NavController) {
             Text("Xem Radar")
         }
     }
+}
+fun sendHttpCommand(command: String, esp32Ip: String) {
+    val client = OkHttpClient()
+    val url = "http://$esp32Ip/$command"
+
+    val request = Request.Builder()
+        .url(url)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("HTTP", "Lỗi khi gửi lệnh: $command", e)
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                Log.d("HTTP", "Lệnh đã gửi thành công: $command")
+            } else {
+                Log.e("HTTP", "Lỗi phản hồi từ ESP32")
+            }
+        }
+
+
+
+
+    })
 }

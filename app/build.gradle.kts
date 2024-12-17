@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
+    id ("com.google.gms.google-services") // Thêm plugin Firebase
 }
 
 android {
@@ -59,11 +59,14 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+
     implementation(libs.androidx.foundation)
 
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.database.ktx)
+    // Thêm thư viện Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation (libs.firebase.analytics) // Firebase Analytics
+    implementation(libs.google.firebase.database.ktx)
+
 
     implementation(libs.androidx.compose.ui.ui)
     implementation(libs.androidx.compose.material3.material3)

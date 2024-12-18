@@ -26,7 +26,21 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
-
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
+import android.util.Base64
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import okhttp3.*
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.unit.sp
+import java.util.concurrent.TimeUnit
 
 sealed class Screen {
     object Menu : Screen()
@@ -73,12 +87,12 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.LightGray)
+            .background(Color.Black)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Menu Chính", style = MaterialTheme.typography.headlineMedium, color = Color.Black)
+        Text("Menu Chính", style = MaterialTheme.typography.headlineMedium, color = Color.White)
         Button(onClick = { onNavigate(Screen.Radar) }) { Text("Giao diện Radar") }
         Button(onClick = { onNavigate(Screen.CarControl) }) { Text("Điều khiển xe và camera") }
         Button(onClick = { onNavigate(Screen.DrawLine) }) { Text("Vẽ đường đi") }
@@ -97,11 +111,13 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
     val database = FirebaseDatabase.getInstance()
     val radarRef = database.getReference("Radar")
     val codeNumberRef = database.getReference("Code_Number")
+    var isScanning by remember { mutableStateOf(false) } // Biến trạng thái quét
 
     // Hàm khởi động quét
     fun startMeasurement() {
         radarDataList = emptyList() // Xóa dữ liệu cũ
-        codeNumberRef.setValue(7) // Gửi Code_Number lên Firebase
+        codeNumberRef.child("7").setValue("true")
+        isScanning = true
         sweepAngle = 180f
     }
 
@@ -209,81 +225,173 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
     }
 }
 
+class WebSocketManager(private val url: String) {
+    private var webSocket: WebSocket? = null
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
+
+    var onImageReceived: ((Bitmap) -> Unit)? = null
+    var onTextMessage: ((String) -> Unit)? = null
+
+    fun connect() {
+        val request = Request.Builder().url(url).build()
+        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                println("WebSocket connected")
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                // Giả sử dữ liệu là Base64, chuyển đổi thành Bitmap
+                try {
+                    val decodedBytes = Base64.decode(text, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                    if (bitmap != null) {
+                        onImageReceived?.invoke(bitmap)
+                    } else {
+                        onTextMessage?.invoke("Không thể giải mã hình ảnh")
+                    }
+                } catch (e: Exception) {
+                    onTextMessage?.invoke("Dữ liệu không hợp lệ: ${e.message}")
+                }
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                println("WebSocket connection failed: ${t.message}")
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                println("WebSocket closed: $reason")
+            }
+        })
+    }
+
+    fun disconnect() {
+        webSocket?.close(1000, "Client closed connection")
+    }
+}
+
+
+class CameraViewModel : ViewModel() {
+    private val webSocketManager = WebSocketManager("wss://server-esp32-yc5t.onrender.com")
+    val imageBitmap = mutableStateOf<Bitmap?>(null)
+    val statusMessage = mutableStateOf("Đang kết nối WebSocket...")
+
+    init {
+        webSocketManager.onImageReceived = { bitmap ->
+            imageBitmap.value = bitmap
+            statusMessage.value = "Hình ảnh mới đã nhận"
+        }
+        webSocketManager.onTextMessage = { message ->
+            statusMessage.value = message
+        }
+        webSocketManager.connect()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocketManager.disconnect()
+    }
+}
+
 @Composable
-fun CarControlScreen(onNavigateBack: () -> Unit) {
+fun CarControlScreen(onNavigateBack: () -> Unit, cameraViewModel: CameraViewModel = viewModel()) {
+    val imageBitmap by cameraViewModel.imageBitmap
+    val statusMessage by cameraViewModel.statusMessage
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // Nút trở về
+        // Nút Trở về
         Button(
             onClick = onNavigateBack,
             modifier = Modifier
-                .padding(8.dp)
                 .align(Alignment.TopStart)
+                .padding(8.dp)
         ) {
             Text("Trở về")
         }
-    }
-    Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-        // Các nút điều khiển bên trái
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = {},//BỎ SỰ KIỆN VÀO ĐÂY
-                shape = RoundedCornerShape(0.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+
+        // Hiển thị hình ảnh hoặc trạng thái
+        if (imageBitmap != null) {
+            Image(
+                bitmap = imageBitmap!!.asImageBitmap(),
+                contentDescription = "Hình ảnh từ ESP32-CAM",
                 modifier = Modifier
-                    .width(70.dp)
-                    .height(90.dp)
-            ) {}
-            Button(
-                onClick = {},
-                shape = RoundedCornerShape(0.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
-                modifier = Modifier
-                    .width(70.dp)
-                    .height(90.dp)
-            ) {}
+                    .size(300.dp)
+                    .align(Alignment.Center)
+            )
+        } else {
+            Text(
+                text = statusMessage,
+                modifier = Modifier.align(Alignment.Center),
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
-        // Điều khiển bên phải
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Nút STOP lớn nằm bên trái
-            Button(
-                onClick = {  },
-                shape = RoundedCornerShape(0.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+
+        // Các nút điều khiển
+        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            Row(
                 modifier = Modifier
-                    .width(70.dp)
-                    .height(90.dp)
-            ) {}
-            // UP và DOWN nằm bên phải
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .align(Alignment.BottomStart)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                //Trái
                 Button(
                     onClick = {},
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
                     modifier = Modifier
                         .width(70.dp)
-                        .height(40.dp)
-                ) {
-                }
+                        .height(90.dp)
+                ) {}
+                //Phải
                 Button(
-                    onClick ={},
+                    onClick = {},
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
                     modifier = Modifier
                         .width(70.dp)
-                        .height(40.dp)
+                        .height(90.dp)
                 ) {}
+            }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                //Stop
+                Button(
+                    onClick = {},
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier
+                        .width(70.dp)
+                        .height(90.dp)
+                ) {}
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    //Lên
+                    Button(
+                        onClick = {},
+                        shape = RoundedCornerShape(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(40.dp)
+                    ) {}
+                    //Xuống
+                    Button(
+                        onClick = {},
+                        shape = RoundedCornerShape(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(40.dp)
+                    ) {}
+                }
             }
         }
     }

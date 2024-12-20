@@ -16,8 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.R
 import com.example.myapplication.ui.component.DrawingArea
 import kotlinx.coroutines.Dispatchers
@@ -61,22 +63,7 @@ fun MainScreen(navController: NavController) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.arrow_up),
-                    contentDescription = "Tiến",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clickable {
-                            sendCommand("forward")
-                            Toast.makeText(context, "Xe Tiến", Toast.LENGTH_SHORT).show()
-                        },
-                    contentScale = ContentScale.Fit
-                )
-            }
+
 
             DrawingArea(
                 modifier = Modifier
@@ -92,6 +79,20 @@ fun MainScreen(navController: NavController) {
         ) {
             Text("Xem Radar")
         }
+        Button(
+            onClick = { navController.navigate("mapping") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Xem Map")
+        }
+        Button(
+            onClick = { navController.navigate("setting") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Setting")
+        }
+
+
     }
 }
 fun sendHttpCommand(command: String, esp32Ip: String) {
@@ -119,4 +120,16 @@ fun sendHttpCommand(command: String, esp32Ip: String) {
 
 
     })
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewScreen() {
+    val mockNavController = rememberNavController() // Mock NavController
+//    RadarScreen(navController = mockNavController)
+//    MappingScreen(navController = mockNavController)
+    MainScreen(navController = mockNavController)
+//    SettingsScreen(navController = mockNavController)
+
+
 }

@@ -41,6 +41,9 @@ android {
 }
 
 dependencies {
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -76,4 +79,36 @@ dependencies {
     implementation(libs.androidx.material3.v111)
     implementation(libs.androidx.compose.ui.ui.tooling.preview)
     implementation(libs.androidx.navigation.compose)
+    // Choose one of the following:
+    // Material Design 3
+    // or Material Design 2
+    implementation(libs.androidx.material)
+    // or skip Material Design and build directly on top of foundational components
+    // or only import the main APIs for the underlying toolkit systems,
+    // such as input and measurement/layout
+
+    // Android Studio Preview support
+    debugImplementation(libs.androidx.compose.ui.ui.tooling)
+
+    // UI Tests
+    androidTestImplementation(libs.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.ui.test.manifest)
+
+    // Optional - Included automatically by material, only add when you need
+    // the icons but not the material library (e.g. when using Material3 or a
+    // custom design system based on Foundation)
+    implementation(libs.androidx.material.icons.core)
+    // Optional - Add full set of material icons
+    implementation(libs.androidx.material.icons.extended)
+    // Optional - Add window size utils
+    implementation(libs.androidx.adaptive)
+
+    // Optional - Integration with activities
+    implementation(libs.androidx.activity.compose.v192)
+    // Optional - Integration with ViewModels
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Optional - Integration with LiveData
+    implementation(libs.androidx.runtime.livedata)
+    // Optional - Integration with RxJava
+    implementation(libs.androidx.runtime.rxjava2)
 }

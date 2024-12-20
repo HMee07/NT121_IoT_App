@@ -34,7 +34,7 @@ fun AnglePicker(
     val segmentCount = angles.size
     val segmentAngle = 360f / segmentCount
 
-    val radius = 120.dp
+    val radius = 80.dp
     val density = LocalDensity.current
     val radiusPx = with(density) { radius.toPx() }
 
@@ -42,7 +42,7 @@ fun AnglePicker(
         // Trạng thái thu gọn: chỉ hiển thị hình tròn nhỏ với góc hiện tại
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(50.dp)
                 .background(Color.LightGray, shape = CircleShape)
                 .clickable {
                     isExpanded = true // Mở menu chọn góc
@@ -150,7 +150,7 @@ fun AnglePicker(
             // Có thể nhấn vào để thu gọn menu nếu muốn
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(40.dp)
                     .background(Color.White, CircleShape)
                     .clickable {
                         isExpanded = false // Thu gọn nếu không muốn chọn góc

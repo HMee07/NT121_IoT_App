@@ -56,6 +56,7 @@ fun RadarScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
 
+
     // State quản lý giao diện
     val selectedAngle = remember { mutableIntStateOf(60) }
     val speed = remember { mutableFloatStateOf(50f) }
@@ -71,6 +72,10 @@ fun RadarScreen(navController: NavController) {
     // Firebase Realtime Database
     val database = FirebaseDatabase.getInstance()
     val dbReference = database.reference
+
+    // Trạng thái cho chế độ radar toàn màn hình
+    val isFullScreen = remember { mutableStateOf(false) }
+
 
     // Hàm gửi dữ liệu tới Firebase
     fun sendCommandToFirebase(path: String, value: Any) {
@@ -117,211 +122,257 @@ fun RadarScreen(navController: NavController) {
             .fillMaxSize()
 //            .verticalScroll(rememberScrollState()) // Kích hoạt cuộn cho màn hình
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Radar (Bên trái)
+        if (isFullScreen.value) {
+            // Chế độ radar toàn màn hình
             Box(
                 modifier = Modifier
-                    .weight(0.5f)
-                    .fillMaxHeight()
+                    .fillMaxSize()
                     .background(Color.Black)
             ) {
                 RadarView(
                     modifier = Modifier.fillMaxSize(),
-                    sweepAngle = selectedAngle.intValue // Góc quét được truyền vào từ AnglePicker
+                    sweepAngle = 60 // Ví dụ góc quét cố định
                 )
+                // Nút thoát chế độ toàn màn hình
+                Button(
+                    onClick = { isFullScreen.value = false }, // Thoát chế độ toàn màn hình
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                ) {
+                    Text("X", color = Color.White, fontSize = 20.sp)
+                }
             }
-
-            // Các điều khiển (Bên phải)
-            Column(
-                modifier = Modifier
-                    .weight(0.5f)
-                    .fillMaxHeight()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize()
             ) {
-                Row {
+                // Radar (Bên trái)
+                Box(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .fillMaxHeight()
+                        .background(Color.Black)
+                ) {
+                    RadarView(
+                        modifier = Modifier.fillMaxSize(),
+                        sweepAngle = selectedAngle.intValue // Góc quét được truyền vào từ AnglePicker
+                    )
 
-                    Column {
-                        Spacer(modifier = Modifier.height(30.dp))
-
-                        Slider(
-                            value = animatedSpeed.value,
-                            onValueChange = { newSpeed ->
-                                speed.value = newSpeed
-                                // Gửi dữ liệu tới Firebase hoặc cập nhật trạng thái
-                            },
-                            valueRange = 0f..100f,
-                            steps = 100,
-                            modifier = Modifier
-                                .height(30.dp) // Giới hạn chiều cao
-                                .width(100.dp)   // Đặt chiều rộng cố định
-                                .rotate(-90f)   // Xoay thành thanh đứng
-                        )
-                        Spacer(modifier = Modifier.height(38.dp))
-
-//                       SimpleVerticalSlider()
-                        Text(
-                            text = "Tốc độ hiện tại: ${animatedSpeed.value.toInt()}%",
-                            fontSize = 14.sp,
-                            color = Color.Black
-                        )
-                    }
-
-                    Column {
-
-                        // Hiển thị thông báo số lượng vật thể
-                        Text(
-                            text = "Có ${objectCount.value} vật thể đang ở xung quanh bạn!",
-                            fontSize = 16.sp,
-                            color = Color.Gray,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.LightGray, RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        )
-
-                        // Hàng chọn góc và chế độ tự động
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Chọn góc
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                AnglePicker(
-                                    selectedAngle = selectedAngle.value,
-                                    onAngleSelected = { angle ->
-                                        selectedAngle.value = angle
-                                        sendCommandToFirebase("Control/Angle", angle)
-                                    }
-                                )
-                                Text("Góc hiện tại: ${selectedAngle.value}°", fontSize = 14.sp)
-                            }
-
-                            // Chế độ tự động
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Switch(
-                                    checked = isAutoMode.value,
-                                    onCheckedChange = { isChecked -> isAutoMode.value = isChecked },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.Green,
-                                        uncheckedThumbColor = Color.Red
-                                    )
-                                )
-                                Text("Chế độ tự động", fontSize = 14.sp)
-
-                            }
-                            // Nút hiển thị/ẩn các nút điều khiển
-                            Button(
-                                onClick = {
-                                    isControlsVisible.value = !isControlsVisible.value
-                                }, // Toggle trạng thái
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape
-                            ) {
-                                Text(
-                                    if (isControlsVisible.value) "-" else "+",
-                                    fontSize = 20.sp,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
                 }
 
-                // Điều khiển xe
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (isControlsVisible.value) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Các điều khiển (Bên phải)
+                Column(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .fillMaxHeight()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row {
 
-                            Button(
-                                onClick = {
-                                    sendCommandToFirebase(
-                                        "Control/Command",
-                                        "forward"
-                                    )
+                        Column {
+                            Spacer(modifier = Modifier.height(30.dp))
+
+                            Slider(
+                                value = animatedSpeed.value,
+                                onValueChange = { newSpeed ->
+                                    speed.value = newSpeed
+                                    // Gửi dữ liệu tới Firebase hoặc cập nhật trạng thái
                                 },
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                            ) { Text("↑", color = Color.White, fontSize = 20.sp) }
-                            Spacer(modifier = Modifier.height(8.dp))
+                                valueRange = 0f..100f,
+                                steps = 100,
+                                modifier = Modifier
+                                    .height(30.dp) // Giới hạn chiều cao
+                                    .width(100.dp)   // Đặt chiều rộng cố định
+                                    .rotate(-90f)   // Xoay thành thanh đứng
+                            )
+                            Spacer(modifier = Modifier.height(38.dp))
 
+//                       SimpleVerticalSlider()
+                            Text(
+                                text = "Tốc độ hiện tại: ${animatedSpeed.value.toInt()}%",
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
 
-                            Row {
-                                Button(
-                                    onClick = {
-                                        sendCommandToFirebase("Control/Command", "left")
+                        Column {
 
-                                    },
-                                    modifier = Modifier.size(50.dp),
-                                    shape = CircleShape,
-                                ) { Text("←", color = Color.White, fontSize = 20.sp) }
+                            // Hiển thị thông báo số lượng vật thể
+                            Text(
+                                text = "Có ${objectCount.value} vật thể đang ở xung quanh bạn!",
+                                fontSize = 16.sp,
+                                color = Color.Gray,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.LightGray, RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
+                            )
 
-                                Spacer(modifier = Modifier.width(8.dp))
+                            // Hàng chọn góc và chế độ tự động
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Chọn góc
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    AnglePicker(
+                                        selectedAngle = selectedAngle.value,
+                                        onAngleSelected = { angle ->
+                                            selectedAngle.value = angle
+                                            sendCommandToFirebase("Control/Angle", angle)
+                                        }
+                                    )
+                                    Text("Góc hiện tại: ${selectedAngle.value}°", fontSize = 14.sp)
+                                }
 
-                                Button(
-                                    onClick = {
-                                        sendCommandToFirebase(
-                                            "Control/Command",
-                                            "stop"
+                                // Chế độ tự động
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Switch(
+                                        checked = isAutoMode.value,
+                                        onCheckedChange = { isChecked ->
+                                            isAutoMode.value = isChecked
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.Green,
+                                            uncheckedThumbColor = Color.Red
                                         )
-                                    },
-                                    modifier = Modifier.size(50.dp),
-                                    shape = CircleShape,
-                                ) { Text("■", color = Color.White, fontSize = 20.sp) }
+                                    )
+                                    Text("Chế độ tự động", fontSize = 14.sp)
 
-                                Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                                Button(
-                                    onClick = {
-                                        sendCommandToFirebase(
-                                            "Control/Command",
-                                            "right"
+                                    // Nút hiển thị/ẩn các nút điều khiển
+                                    Button(
+                                        onClick = {
+                                            isControlsVisible.value = !isControlsVisible.value
+                                        }, // Toggle trạng thái
+                                        modifier = Modifier.size(50.dp),
+                                        shape = CircleShape
+                                    ) {
+                                        Text(
+                                            if (isControlsVisible.value) "-" else "+",
+                                            fontSize = 20.sp,
+                                            color = Color.White
                                         )
-                                    },
-                                    modifier = Modifier.size(50.dp),
-                                    shape = CircleShape,
-                                ) { Text("→", color = Color.White, fontSize = 20.sp) }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Nút mở rộng radar full màn hình
+                                    Button(
+                                        onClick = {
+                                            isFullScreen.value = true
+                                        }, // Bật chế độ toàn màn hình
+                                        modifier = Modifier.size(50.dp),
+                                        shape = CircleShape,
+                                    ) {
+                                        Text("⤢", color = Color.White, fontSize = 20.sp)
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-
-
-                            Button(
-                                onClick = {
-                                    sendCommandToFirebase(
-                                        "Control/Command",
-                                        "backward"
-                                    )
-                                },
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape,
-                            ) { Text("↓", color = Color.White, fontSize = 20.sp) }
                         }
                     }
+
+                    // Điều khiển xe
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (isControlsVisible.value) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                                Button(
+                                    onClick = {
+                                        sendCommandToFirebase(
+                                            "Control/Command",
+                                            "forward"
+                                        )
+                                    },
+                                    modifier = Modifier.size(50.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                                ) { Text("↑", color = Color.White, fontSize = 20.sp) }
+                                Spacer(modifier = Modifier.height(8.dp))
+
+
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            sendCommandToFirebase("Control/Command", "left")
+
+                                        },
+                                        modifier = Modifier.size(50.dp),
+                                        shape = CircleShape,
+                                    ) { Text("←", color = Color.White, fontSize = 20.sp) }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Button(
+                                        onClick = {
+                                            sendCommandToFirebase(
+                                                "Control/Command",
+                                                "stop"
+                                            )
+                                        },
+                                        modifier = Modifier.size(50.dp),
+                                        shape = CircleShape,
+                                    ) { Text("■", color = Color.White, fontSize = 20.sp) }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Button(
+                                        onClick = {
+                                            sendCommandToFirebase(
+                                                "Control/Command",
+                                                "right"
+                                            )
+                                        },
+                                        modifier = Modifier.size(50.dp),
+                                        shape = CircleShape,
+                                    ) { Text("→", color = Color.White, fontSize = 20.sp) }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+
+
+                                Button(
+                                    onClick = {
+                                        sendCommandToFirebase(
+                                            "Control/Command",
+                                            "backward"
+                                        )
+                                    },
+                                    modifier = Modifier.size(50.dp),
+                                    shape = CircleShape,
+                                ) { Text("↓", color = Color.White, fontSize = 20.sp) }
+                            }
+                        }
 
 //
 
-                    // Nút quay lại
-                    Button(
-                        onClick = { navController.popBackStack() },
+                        // Nút quay lại
+                        Button(
+                            onClick = { navController.popBackStack() },
 //                modifier = Modifier.fillMaxWidth()
-                        modifier = Modifier
-                            .padding(top = 16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Quay lại", color = Color.White)
+                            modifier = Modifier
+                                .padding(top = 16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Quay lại", color = Color.White)
+                        }
                     }
-                }
 
+                }
             }
         }
     }

@@ -60,7 +60,11 @@ fun navigateWithCheck(mode: String, navDestination: String) {
         val modePath = "Car_Support/Giao_Dien/$mode" // Đường dẫn tới chế độ
         try {
             // Kiểm tra trạng thái chế độ
-            val isAvailable = database.child(modePath).get().await().value.toString() == "false"
+            val modeSnapshot = database.child(modePath).get().await()
+            val isAvailable = modeSnapshot.exists() && modeSnapshot.value.toString() == "false"
+
+
+//            val isAvailable = database.child(modePath).get().await().value.toString() == "false"
             if (isAvailable) {
                 // Cập nhật trạng thái thành "true"
                 database.child(modePath).setValue("true").await()
@@ -73,6 +77,9 @@ fun navigateWithCheck(mode: String, navDestination: String) {
             }
         } catch (e: Exception) {
             Log.e("Firebase", "Lỗi khi kiểm tra chế độ: $e")
+            scope.launch(Dispatchers.Main) {
+                Toast.makeText(context, "Lỗi khi kiểm tra chế độ!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

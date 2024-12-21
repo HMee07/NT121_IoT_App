@@ -1,301 +1,197 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.myapplication.ui.screen
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.database.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 
-// Định nghĩa data class MapPoint
-data class MapPoint(
-    val x: Float,
-    val y: Float,
-    val distance: Float,
-    val angle: Float
-)
+data class Obstacle(val angle: Float, val distance: Float)
 
 @Composable
 fun MappingScreen(navController: NavController) {
     val context = LocalContext.current
-    var mapData by remember { mutableStateOf<List<MapPoint>>(emptyList()) }
-    var area by remember { mutableStateOf(0f) }
-    var scanStatus by remember { mutableStateOf("Chưa quét") }
-    var isScanning by remember { mutableStateOf(scanStatus != "mapping_completed") }
-
     val scope = rememberCoroutineScope()
-    val database = FirebaseDatabase.getInstance()
-    val dbReference = database.reference
-
-    // Hàm tính diện tích sử dụng công thức Shoelace
-    fun calculateArea(points: List<MapPoint>): Float {
-//        if (points.size < 3) return 0f // Không đủ điểm để tính diện tích
-        if (points.size < 3) {
-            Toast.makeText(context, "Không đủ dữ liệu để tính diện tích!", Toast.LENGTH_SHORT).show()
-            return 0f
-        }
-
-        var area = 0f
-        val n = points.size
-        for (i in 0 until n) {
-            val j = (i + 1) % n
-            area += points[i].x * points[j].y
-            area -= points[j].x * points[i].y
-        }
-        return abs(area) / 2
-    }
-
-    // Hàm gửi lệnh lên Firebase (dựa vào mã lệnh)
-//    fun updateButtonState(button: Int, database: DatabaseReference) {
-//        val commands = listOf("0", "1", "2", "3", "4") // Các mã lệnh Dừng, Tiến, Lùi, Trái, Phải
-//        val updates = mutableMapOf<String, Any>()
-//
-//        commands.forEach {
-//            updates[it] = if (it == button.toString()) "true" else "false"
-//        }
-//
-//        database.child("Car_Control/Control").updateChildren(updates).addOnCompleteListener { task ->
-//            if (task.isSuccessful) {
-//                Toast.makeText(context, "Lệnh đã được gửi thành công: $button", Toast.LENGTH_SHORT).show()
-//            } else {
-//                Toast.makeText(context, "Lỗi khi gửi lệnh: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//    }
-    fun updateButtonState(button: Int, controlRef: DatabaseReference) {
-        val commands = listOf("0", "1", "2", "3", "4") // Các mã lệnh Dừng, Tiến, Lùi, Trái, Phải
-        val updates = mutableMapOf<String, Any>()
-
-        commands.forEach {
-            updates[it] = if (it == button.toString()) "true" else "false"
-        }
-
-        controlRef.updateChildren(updates).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Toast.makeText(context, "Lệnh đã được gửi thành công: $button", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Lỗi khi gửi lệnh: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    val database = FirebaseDatabase.getInstance().getReference("Car_Support/Radar/Data")
 
 
-    // Lắng nghe dữ liệu từ Firebase
-    fun listenToFirebase() {
-        val mapRef = database.getReference("Data_test/mapData")
-        val statusRef = database.getReference("Car_Support/Giao_Dien/Mapping")
+    var obstacles by remember { mutableStateOf(listOf<Obstacle>()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var area by remember { mutableStateOf(0f) }
+    val coroutineScope = rememberCoroutineScope()
 
-        // Lắng nghe dữ liệu map
-        mapRef.addValueEventListener(object : ValueEventListener {
+    LaunchedEffect(Unit) {
+        database.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val points = mutableListOf<MapPoint>()
-                for (pointSnapshot in snapshot.children) {
-                    val x = pointSnapshot.child("x").getValue(Float::class.java) ?: 0f
-                    val y = pointSnapshot.child("y").getValue(Float::class.java) ?: 0f
-                    val distance = pointSnapshot.child("distance").getValue(Float::class.java) ?: 0f
-                    val angle = pointSnapshot.child("angle").getValue(Float::class.java) ?: 0f
-                    points.add(MapPoint(x, y, distance, angle))
+                val tempList = mutableListOf<Obstacle>()
+                for (data in snapshot.children) {
+                    val angleStr = data.key
+//                    val distanceLong = data.getValue(Long::class.java) ?: data.getValue(Double::class.java)?.toString()
+                    val distanceLong = data.getValue(Long::class.java) // Lấy giá trị dưới dạng Long
+
+                    if (angleStr != null && distanceLong != null) {
+                        val angle = angleStr.toFloatOrNull()
+                        val distance = distanceLong.toFloat()
+                        if (angle != null && distance != null) {
+                            tempList.add(Obstacle(angle, distance))
+                        }else {
+                            Log.e("MappingScreen", "Invalid data: angle=$angleStr, distance=$distanceLong")
+                        }
+                    }
+                    else {
+                        Log.e("MappingScreen", "Missing angle or distance")
+                    }
                 }
-                mapData = points
+                obstacles = tempList
+                area = calculateArea(tempList)
+                isLoading = false
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Lỗi khi tải dữ liệu bản đồ: ${error.message}", Toast.LENGTH_SHORT).show()
+                Log.e("MappingScreen", "Failed to read data", error.toException())
+                Toast.makeText(context, "Lỗi khi tải dữ liệu!", Toast.LENGTH_SHORT).show()
+                isLoading = false
             }
         })
-
-        // Lắng nghe trạng thái quét
-
-        // Lắng nghe trạng thái quét
-        statusRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (!snapshot.exists()) {
-                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
-                isScanning = scanStatus != "mapping_completed"
-                if (scanStatus == "mapping_completed") {
-                    area = calculateArea(mapData)
-                    Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
-//        statusRef.addValueEventListener(object : ValueEventListener {
-//            override fun onDataChange(snapshot: DataSnapshot) {
-//                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
-//                if (scanStatus == "mapping_completed") {
-//                    isScanning = false
-//                    area = calculateArea(mapData)
-//                    Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
-//                }
-//            }
-
-//            override fun onDataChange(snapshot: DataSnapshot) {
-//                if (!snapshot.exists()) {
-//                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
-//                    return
-//                }
-//                val points = mutableListOf<MapPoint>()
-//                for (pointSnapshot in snapshot.children) {
-//                    val x = pointSnapshot.child("x").getValue(Float::class.java) ?: 0f
-//                    val y = pointSnapshot.child("y").getValue(Float::class.java) ?: 0f
-//                    val distance = pointSnapshot.child("distance").getValue(Float::class.java) ?: 0f
-//                    val angle = pointSnapshot.child("angle").getValue(Float::class.java) ?: 0f
-//                    points.add(MapPoint(x, y, distance, angle))
-//                }
-//                mapData = points
-//            }
-
-
-
-//            override fun onCancelled(error: DatabaseError) {
-//                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
-//            }
-//        })
     }
 
-    // Hàm tự động quét
-    fun autoMapping() {
-        val sensorRef = database.getReference("Sensor")
-        sensorRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val distance = snapshot.child("Distance").getValue(Float::class.java) ?: 0f
-                val angle = snapshot.child("Angle").getValue(Float::class.java) ?: 0f
-
-                if (distance < 20) {
-                    if (distance < 0 || distance > 500) {
-                        Toast.makeText(context, "Dữ liệu khoảng cách không hợp lệ!", Toast.LENGTH_SHORT).show()
-                        return
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Mapping Screen") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            try {
+                                // Đặt 'Mapping' thành false khi nhấn nút
+                                FirebaseDatabase.getInstance()
+                                    .getReference("Car_Support/Giao_Dien/Mapping")
+                                    .setValue("false") // Sử dụng Boolean
+                                    .await()
+                                Log.d("MappingScreen", "Successfully reset 'Mapping' to false")
+                            } catch (e: Exception) {
+                                Log.e("MappingScreen", "Failed to reset 'Mapping' to false", e)
+                            }
+//                        navController.popBackStack()
+                        navController.navigate("main")
                     }
 
-                    // Nếu có vật cản, rẽ trái hoặc phải
-                    updateButtonState(if (angle < 90) 3 else 4, database.getReference("Car_Control/Control"))
-                } else {
-                    // Nếu không có vật cản, tiến lên
-                    updateButtonState(1, database.getReference("Car_Control/Control"))
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Lỗi khi tự động quét: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-
-    // Khởi chạy lắng nghe Firebase
-    LaunchedEffect(Unit) {
-        listenToFirebase()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Phần hiển thị bản đồ
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(Color.LightGray, RoundedCornerShape(8.dp))
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (mapData.isNotEmpty()) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    mapData.take(100).forEach { point -> // Giới hạn số lượng điểm được vẽ
-                        drawCircle(
-                            color = Color.Red,
-                            radius = 5f,
-                            center = Offset(
-                                x = point.x + size.width / 2,
-                                y = point.y + size.height / 2
-                            )
+                    }) {
+                        Icon(
+                            painter = painterResource(id = com.example.myapplication.R.drawable.ic_back),
+                            contentDescription = "Back"
                         )
                     }
                 }
-
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.weight(1f))
             } else {
-                Text(text = "Chưa có dữ liệu bản đồ", color = Color.Gray, fontSize = 16.sp)
+                MapCanvas(obstacles = obstacles)
+                Text(
+                    text = "Diện tích vùng quét: $area cm²",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
-        }
-
-//
-//      Các nút điều khiển
-        Button(
-            onClick = {
-                // Chỉ cho phép thay đổi trạng thái nếu trạng thái không bị khóa
-                if (!isScanning) {
-                    scope.launch {
-                        // Bắt đầu quét
-                        database.getReference("Car_Support/Giao_Dien/Mapping")
-                            .setValue("true").await() // Ghi trạng thái "đang quét" lên Firebase
-                        isScanning = true // Cập nhật trạng thái cục bộ
-                        autoMapping() // Kích hoạt quá trình tự động quét
-                    }
-                } else {
-                    scope.launch {
-                        // Dừng quét
-                        database.getReference("Car_Support/Giao_Dien/Mapping")
-                            .setValue("false").await() // Ghi trạng thái "ngừng quét" lên Firebase
-                        isScanning = false // Cập nhật trạng thái cục bộ
-                        updateButtonState(0, database.getReference("Car_Control/Control")) // Dừng các lệnh điều khiển
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color.Red else Color.Blue)
-        ) {
-            Text(if (isScanning) "Dừng Quét" else "Bắt Đầu Quét", color = Color.White)
-        }
-
-
-        // Đặt trạng thái về false khi thoát giao diện
-        DisposableEffect(Unit) {
-            onDispose {
-                scope.launch(Dispatchers.IO) {
-                    dbReference.child("Car_Support/Giao_Dien").child("Mapping").setValue("false").await()
-                }
-            }
-        }
-        // Nút quay lại
-        Button(
-            onClick = {
-                navController.navigate("main")
-            },
-//                modifier = Modifier.fillMaxWidth()
-            modifier = Modifier
-                .padding(top = 16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Quay lại", color = Color.White)
         }
     }
+}
+
+@Composable
+fun MapCanvas(obstacles: List<Obstacle>) {
+    Canvas(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        val centerX = canvasWidth / 2
+        val centerY = canvasHeight / 2
+        val maxDistance = obstacles.maxOfOrNull { it.distance } ?: 100f
+        val radius = min(canvasWidth, canvasHeight) / 2 - 20.dp.toPx()
+
+        // Vẽ vòng tròn radar
+        drawCircle(
+            color = Color.Green,
+            radius = radius,
+            center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+            style = Stroke(width = 4f)
+        )
+
+        // Vẽ các đường kinh tuyến (mỗi 45 độ)
+        for (i in 0..360 step 45) {
+            val angleRad = Math.toRadians(i.toDouble())
+            val endX = centerX + radius * cos(angleRad).toFloat()
+            val endY = centerY + radius * sin(angleRad).toFloat()
+            drawLine(
+                color = Color.LightGray,
+                start = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                end = androidx.compose.ui.geometry.Offset(endX, endY),
+                strokeWidth = 2f
+            )
+        }
+
+        // Vẽ các vật cản
+        obstacles.forEach { obstacle ->
+            val angleRad = Math.toRadians(obstacle.angle.toDouble())
+            val distanceRatio = obstacle.distance / maxDistance
+            val distancePx = distanceRatio * radius
+            val x = centerX + distancePx * cos(angleRad).toFloat()
+            val y = centerY + distancePx * sin(angleRad).toFloat()
+
+            drawCircle(
+                color = Color.Red,
+                radius = 8f,
+                center = androidx.compose.ui.geometry.Offset(x, y)
+            )
+        }
+    }
+}
+
+fun calculateArea(obstacles: List<Obstacle>): Float {
+    if (obstacles.size < 3) return 0f
+
+    // Chuyển đổi từ góc và khoảng cách sang tọa độ X, Y
+    val points = obstacles.map { obstacle ->
+        val angleRad = Math.toRadians(obstacle.angle.toDouble())
+        val x = (obstacle.distance * cos(angleRad)).toFloat()
+        val y = (obstacle.distance * sin(angleRad)).toFloat()
+        Pair(x, y)
+    }
+
+    // Tính diện tích bằng công thức Shoelace
+    var area = 0f
+    for (i in points.indices) {
+        val (x1, y1) = points[i]
+        val (x2, y2) = points[(i + 1) % points.size]
+        area += (x1 * y2 - x2 * y1)
+    }
+    return kotlin.math.abs(area) / 2
 }

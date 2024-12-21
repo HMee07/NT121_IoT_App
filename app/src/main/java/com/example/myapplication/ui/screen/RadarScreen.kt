@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screen
 
 import android.graphics.drawable.Icon
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
@@ -84,28 +85,12 @@ fun RadarScreen(navController: NavController) {
     // Trạng thái cho chế độ radar toàn màn hình
     val isFullScreen = remember { mutableStateOf(false) }
 
-//
-//    // Hàm gửi dữ liệu tới Firebase
-//    fun sendCommandToFirebase(path: String, value: Any) {
-//        coroutineScope.launch {
-//            try {
-//                dbReference.child(path).setValue(value).await()
-//                withContext(Dispatchers.Main) {
-//                    Toast.makeText(context, "Gửi lệnh: $value", Toast.LENGTH_SHORT).show()
-//                }
-//            } catch (e: Exception) {
-//                withContext(Dispatchers.Main) {
-//                    Toast.makeText(context, "Gửi lệnh thất bại", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
 
-    fun sendCommandToFirebase(commandNumber: Int, value: Boolean) {
+    fun sendCommandToFirebase(commandNumber: Int, value: String) {
         coroutineScope.launch {
             try {
                 // Gửi giá trị "true" hoặc "false" tới Firebase với key tương ứng
-                dbReference.child("Code_Number").child(commandNumber.toString()).setValue(value).await()
+                dbReference.child("car_Control/Control").child(commandNumber.toString()).setValue(value).await()
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Gửi lệnh $commandNumber: $value", Toast.LENGTH_SHORT).show()
                 }
@@ -450,18 +435,22 @@ fun RadarScreen(navController: NavController) {
                             }
                         }
 
-                        // Đặt trạng thái về false khi thoát giao diện
-                        DisposableEffect(Unit) {
-                            onDispose {
-                                scope.launch(Dispatchers.IO) {
-                                    dbReference.child("Car_Support/Giao_Dien").child("Tranh_Vat").setValue("false").await()
-                                }
-                            }
-                        }
-                                          // Nút quay lại
+                        // Nút quay lại
                         Button(
                             onClick = {
+                                coroutineScope.launch {
+                                    try {
+                                        // Đặt 'Mapping' thành false khi nhấn nút
+                                        FirebaseDatabase.getInstance()
+                                            .getReference("Car_Support/Giao_Dien/Tranh_Vat")
+                                            .setValue("false") // Sử dụng Boolean
+                                            .await()
+                                        Log.d("RadarScreen", "Successfully reset 'Radar' to false")
+                                    } catch (e: Exception) {
+                                        Log.e("RadarScreen", "Failed to reset 'Radar' to false", e)
+                                    }
                                 navController.navigate("main")
+                                    }
                                 },
 //                modifier = Modifier.fillMaxWidth()
                             modifier = Modifier
@@ -478,55 +467,6 @@ fun RadarScreen(navController: NavController) {
         }
     }
 }
-
-
-
-//
-//@Composable
-//fun SimpleVerticalSlider() {
-//    var speed = remember { mutableStateOf(50f) }
-//    val animatedSpeed = animateFloatAsState(targetValue = speed.value)
-//
-//    Column(
-//        modifier = Modifier
-//            .padding(16.dp),
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.Center
-//
-//    ) {
-//        Spacer(modifier = Modifier.width(16.dp))
-//
-//
-//        Slider(
-//            value = animatedSpeed.value,
-//            onValueChange = { newSpeed ->
-//                speed.value = newSpeed
-//                // Gửi dữ liệu tới Firebase hoặc cập nhật trạng thái
-//            },
-//            valueRange = 0f..100f,
-//            steps = 100,
-//            modifier = Modifier
-//                .height(30.dp) // Giới hạn chiều cao
-//                .width(150.dp)   // Đặt chiều rộng cố định
-//                .rotate(-90f)   // Xoay thành thanh đứng
-//        )
-//        Spacer(modifier = Modifier.width(150.dp))
-//
-//        Text(
-//            text = "Tốc độ hiện tại: ${animatedSpeed.value.toInt()}%",
-//            fontSize = 16.sp,
-//            color = Color.Black
-//        )
-//
-//    }
-//}
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewSettingsScreen() {
-//    val mockNavController = rememberNavController() // Mock NavController
-//    RadarScreen(navController = mockNavController)}
 
 
 

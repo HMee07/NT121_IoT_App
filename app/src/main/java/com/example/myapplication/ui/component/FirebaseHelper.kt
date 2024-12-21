@@ -14,7 +14,7 @@ fun updateButtonState(button: Int, database: DatabaseReference) {
     }
 
     // Cập nhật trạng thái vào Firebase
-    database.child("Code_Number").updateChildren(updates).addOnCompleteListener { task ->
+    database.child("Car_Control/Control").updateChildren(updates).addOnCompleteListener { task ->
         if (task.isSuccessful) {
             Log.d("Firebase", "Trạng thái các nút đã được cập nhật (dưới dạng chuỗi)")
         } else {

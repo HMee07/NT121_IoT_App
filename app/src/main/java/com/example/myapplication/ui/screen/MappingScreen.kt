@@ -1,4 +1,3 @@
-// File: com/example/myapplication/ui/screen/MappingScreen.kt
 package com.example.myapplication.ui.screen
 
 import android.widget.Toast
@@ -13,13 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.database.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -35,17 +34,26 @@ data class MapPoint(
 @Composable
 fun MappingScreen(navController: NavController) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
-    // Trạng thái quét
-    var isScanning by remember { mutableStateOf(false) }
+//    var isScanning by remember { mutableStateOf(false) }
     var mapData by remember { mutableStateOf<List<MapPoint>>(emptyList()) }
     var area by remember { mutableStateOf(0f) }
     var scanStatus by remember { mutableStateOf("Chưa quét") }
+    var isScanning = scanStatus != "mapping_completed"
+
+
+    val scope = rememberCoroutineScope()
+
+    val database = FirebaseDatabase.getInstance()
+
+    val dbReference = database.reference
 
     // Hàm tính diện tích sử dụng công thức Shoelace
     fun calculateArea(points: List<MapPoint>): Float {
-        if (points.size < 3) return 0f // Không đủ điểm để tính diện tích
+//        if (points.size < 3) return 0f // Không đủ điểm để tính diện tích
+        if (points.size < 3) {
+            Toast.makeText(context, "Không đủ dữ liệu để tính diện tích!", Toast.LENGTH_SHORT).show()
+            return 0f
+        }
 
         var area = 0f
         val n = points.size
@@ -56,12 +64,29 @@ fun MappingScreen(navController: NavController) {
         }
         return abs(area) / 2
     }
-    // Kết nối Firebase
+
+    // Hàm gửi lệnh lên Firebase (dựa vào mã lệnh)
+    fun updateButtonState(button: Int, database: DatabaseReference) {
+        val commands = listOf("0", "1", "2", "3", "4") // Các mã lệnh Dừng, Tiến, Lùi, Trái, Phải
+        val updates = mutableMapOf<String, Any>()
+
+        commands.forEach {
+            updates[it] = if (it == button.toString()) "true" else "false"
+        }
+
+        database.child("Car_Control/Control").updateChildren(updates).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Toast.makeText(context, "Lệnh đã được gửi thành công: $button", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Lỗi khi gửi lệnh: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Lắng nghe dữ liệu từ Firebase
     fun listenToFirebase() {
-        val database = FirebaseDatabase.getInstance()
-        val mapRef = database.getReference("mapData")
-        val statusRef = database.getReference("status")
-        val areaRef = database.getReference("area")
+        val mapRef = database.getReference("Data_test/mapData")
+        val statusRef = database.getReference("Car_Support/Giao_Dien/Mapping")
 
         // Lắng nghe dữ liệu map
         mapRef.addValueEventListener(object : ValueEventListener {
@@ -78,78 +103,74 @@ fun MappingScreen(navController: NavController) {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                // Xử lý lỗi nếu cần
+                Toast.makeText(context, "Lỗi khi tải dữ liệu bản đồ: ${error.message}", Toast.LENGTH_SHORT).show()
             }
         })
 
         // Lắng nghe trạng thái quét
         statusRef.addValueEventListener(object : ValueEventListener {
+//            override fun onDataChange(snapshot: DataSnapshot) {
+//                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
+//                if (scanStatus == "mapping_completed") {
+//                    isScanning = false
+//                    area = calculateArea(mapData)
+//                    Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
+//                }
+//            }
+
             override fun onDataChange(snapshot: DataSnapshot) {
-                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
-                if (scanStatus == "mapping_completed") {
-                    isScanning = false
-                    // Tính diện tích sau khi hoàn thành quét
-                    area = calculateArea(mapData)
-                    Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
+                if (!snapshot.exists()) {
+                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val points = mutableListOf<MapPoint>()
+                for (pointSnapshot in snapshot.children) {
+                    val x = pointSnapshot.child("x").getValue(Float::class.java) ?: 0f
+                    val y = pointSnapshot.child("y").getValue(Float::class.java) ?: 0f
+                    val distance = pointSnapshot.child("distance").getValue(Float::class.java) ?: 0f
+                    val angle = pointSnapshot.child("angle").getValue(Float::class.java) ?: 0f
+                    points.add(MapPoint(x, y, distance, angle))
+                }
+                mapData = points
+            }
+
+
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    // Hàm tự động quét
+    fun autoMapping() {
+        val sensorRef = database.getReference("Sensor")
+        sensorRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val distance = snapshot.child("Distance").getValue(Float::class.java) ?: 0f
+                val angle = snapshot.child("Angle").getValue(Float::class.java) ?: 0f
+
+                if (distance < 20) {
+                    if (distance < 0 || distance > 500) {
+                        Toast.makeText(context, "Dữ liệu khoảng cách không hợp lệ!", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+
+                    // Nếu có vật cản, rẽ trái hoặc phải
+                    updateButtonState(if (angle < 90) 3 else 4, database.getReference("Car_Control/Control"))
+                } else {
+                    // Nếu không có vật cản, tiến lên
+                    updateButtonState(1, database.getReference("Car_Control/Control"))
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                // Xử lý lỗi nếu cần
-            }
-        })
-
-        // Lắng nghe diện tích
-        areaRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                area = snapshot.getValue(Float::class.java) ?: 0f
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                // Xử lý lỗi nếu cần
+                Toast.makeText(context, "Lỗi khi tự động quét: ${error.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-
-
-    // Hàm gửi lệnh tới Firebase
-    fun sendCommandToFirebase(command: String) {
-        coroutineScope.launch {
-            val database = FirebaseDatabase.getInstance()
-            val commandRef = database.getReference("Control/Command")
-            commandRef.setValue(command).addOnSuccessListener {
-                Toast.makeText(context, "Gửi lệnh: $command thành công", Toast.LENGTH_SHORT).show()
-            }.addOnFailureListener { exception ->
-                Toast.makeText(context, "Gửi lệnh thất bại: ${exception.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    // Hàm bắt đầu quét
-    fun startScanning() {
-        isScanning = true
-        scanStatus = "Đang quét..."
-        mapData = emptyList()
-        area = 0f
-        // Gửi lệnh bắt đầu quét tới ESP32
-        sendCommandToFirebase("start_mapping")
-        // Có thể thêm logic kiểm tra khi nào quét hoàn thành
-    }
-
-    // Hàm dừng quét
-    fun stopScanning() {
-        isScanning = false
-        scanStatus = "Đã dừng quét."
-        // Gửi lệnh dừng quét tới ESP32
-        sendCommandToFirebase("stop_mapping")
-        // Tính diện tích sau khi dừng quét
-        area = calculateArea(mapData)
-        Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
-    }
-
-
-
-    // Bắt đầu lắng nghe dữ liệu từ Firebase khi Composable được tạo
+    // Khởi chạy lắng nghe Firebase
     LaunchedEffect(Unit) {
         listenToFirebase()
     }
@@ -173,8 +194,7 @@ fun MappingScreen(navController: NavController) {
         ) {
             if (mapData.isNotEmpty()) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Vẽ các điểm vật cản
-                    mapData.forEach { point ->
+                    mapData.take(100).forEach { point -> // Giới hạn số lượng điểm được vẽ
                         drawCircle(
                             color = Color.Red,
                             radius = 5f,
@@ -184,95 +204,82 @@ fun MappingScreen(navController: NavController) {
                             )
                         )
                     }
-
-                    // Vẽ đường kết nối các điểm
-                    if (mapData.size > 1) {
-                        for (i in 0 until mapData.size - 1) {
-                            val start = Offset(
-                                x = mapData[i].x + size.width / 2,
-                                y = mapData[i].y + size.height / 2
-                            )
-                            val end = Offset(
-                                x = mapData[i + 1].x + size.width / 2,
-                                y = mapData[i + 1].y + size.height / 2
-                            )
-                            drawLine(
-                                color = Color.Blue,
-                                start = start,
-                                end = end,
-                                strokeWidth = 2f
-                            )
-                        }
-                    }
                 }
+
             } else {
                 Text(text = "Chưa có dữ liệu bản đồ", color = Color.Gray, fontSize = 16.sp)
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Phần hiển thị trạng thái quét và diện tích
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Trạng thái: $scanStatus", fontSize = 18.sp, color = Color.Black)
-            if (!isScanning && mapData.isNotEmpty()) {
-                Text(text = "Diện tích mặt đáy: $area cm²", fontSize = 18.sp, color = Color.Green)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Phần các nút điều khiển
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Button(
-                onClick = {
-                    if (!isScanning) {
-                        startScanning()
-                    }
-                },
-                enabled = !isScanning,
-                modifier = Modifier
-                    .size(width = 120.dp, height = 50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-            ) {
-                Text("Bắt Đầu Quét", color = Color.White, fontSize = 16.sp)
-            }
-
-            Button(
-                onClick = {
-                    if (isScanning) {
-                        stopScanning()
-                    }
-                },
-                enabled = isScanning,
-                modifier = Modifier
-                    .size(width = 120.dp, height = 50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Text("Dừng Quét", color = Color.White, fontSize = 16.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Nút quay lại
+//        // Các nút điều khiển
+//        Button(
+//            onClick = {
+//                if (!isScanning) {
+//                    isScanning = true
+//                    autoMapping()
+//                } else {
+//                    isScanning = false
+//                    updateButtonState(0, database.getReference(""))
+//                }
+//            },
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(8.dp),
+//            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color.Red else Color.Blue)
+//        ) {
+//            Text(if (isScanning) "Dừng Quét" else "Bắt Đầu Quét", color = Color.White)
+//        }
+//      Các nút điều khiển
         Button(
-            onClick = { navController.popBackStack() },
+            onClick = {
+                // Chỉ cho phép thay đổi trạng thái nếu trạng thái không bị khóa
+                if (!isScanning) {
+                    scope.launch {
+                        // Bắt đầu quét
+                        database.getReference("Car_Support/Giao_Dien/Mapping")
+                            .setValue("true").await() // Ghi trạng thái "đang quét" lên Firebase
+                        isScanning = true // Cập nhật trạng thái cục bộ
+                        autoMapping() // Kích hoạt quá trình tự động quét
+                    }
+                } else {
+                    scope.launch {
+                        // Dừng quét
+                        database.getReference("Car_Support/Giao_Dien/Mapping")
+                            .setValue("false").await() // Ghi trạng thái "ngừng quét" lên Firebase
+                        isScanning = false // Cập nhật trạng thái cục bộ
+                        updateButtonState(0, database.getReference("Car_Control/Control")) // Dừng các lệnh điều khiển
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .padding(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color.Red else Color.Blue)
+        ) {
+            Text(if (isScanning) "Dừng Quét" else "Bắt Đầu Quét", color = Color.White)
+        }
+
+
+        // Đặt trạng thái về false khi thoát giao diện
+        DisposableEffect(Unit) {
+            onDispose {
+                scope.launch(Dispatchers.IO) {
+                    dbReference.child("Car_Support/Giao_Dien").child("Mapping").setValue("false").await()
+                }
+            }
+        }
+        // Nút quay lại
+        Button(
+            onClick = {
+                navController.navigate("main")
+            },
+//                modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .padding(top = 16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Quay lại", color = Color.White, fontSize = 16.sp)
+            Text("Quay lại", color = Color.White)
         }
     }
 }
-
-

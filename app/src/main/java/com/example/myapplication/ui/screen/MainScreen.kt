@@ -22,8 +22,10 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.R
 import com.example.myapplication.ui.component.DrawingArea
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -36,7 +38,44 @@ fun MainScreen(navController: NavController) {
     val baseUrl = "http://172.20.10.2"
     val httpClient = remember { OkHttpClient() }
     val scope = rememberCoroutineScope()
+    val database = FirebaseDatabase.getInstance().reference
+
     val context = LocalContext.current
+//    fun navigateWithCheck(mode: Int, navDestination: String) {
+//        scope.launch(Dispatchers.IO) {
+//            val isAvailable = database.child("Code_Giao_Dien").child(mode.toString()).get().await().value.toString() == "false"
+//            if (isAvailable) {
+//                database.child("Code_Giao_Dien").child(mode.toString()).setValue("true").await()
+//                scope.launch(Dispatchers.Main) { navController.navigate(navDestination) }
+//            } else {
+//                scope.launch(Dispatchers.Main) {
+//                    Toast.makeText(navController.context, "Chế độ này đang được sử dụng!", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
+// Hàm kiểm tra chế độ và điều hướng
+fun navigateWithCheck(mode: String, navDestination: String) {
+    scope.launch(Dispatchers.IO) {
+        val modePath = "Car_Support/Giao_Dien/$mode" // Đường dẫn tới chế độ
+        try {
+            // Kiểm tra trạng thái chế độ
+            val isAvailable = database.child(modePath).get().await().value.toString() == "false"
+            if (isAvailable) {
+                // Cập nhật trạng thái thành "true"
+                database.child(modePath).setValue("true").await()
+                scope.launch(Dispatchers.Main) { navController.navigate(navDestination) }
+            } else {
+                // Hiển thị thông báo nếu chế độ đang được sử dụng
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(context, "Chế độ này đang được sử dụng!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Firebase", "Lỗi khi kiểm tra chế độ: $e")
+        }
+    }
+}
 
     fun sendCommand(command: String) {
         scope.launch(Dispatchers.IO) {
@@ -73,23 +112,14 @@ fun MainScreen(navController: NavController) {
             )
         }
 
-        Button(
-            onClick = { navController.navigate("radar") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Xem Radar")
+        Button(onClick = { navigateWithCheck("Tranh_Vat", "radar") }, modifier = Modifier.fillMaxWidth()) {
+            Text("Chế độ Radar")
         }
-        Button(
-            onClick = { navController.navigate("mapping") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Xem Map")
+        Button(onClick = { navigateWithCheck("Mapping", "mapping") }, modifier = Modifier.fillMaxWidth()) {
+            Text("Chế độ Mapping")
         }
-        Button(
-            onClick = { navController.navigate("setting") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Setting")
+        Button(onClick = { navigateWithCheck("Remote", "setting") }, modifier = Modifier.fillMaxWidth()) {
+            Text("Chế độ Setting")
         }
 
 
@@ -121,6 +151,8 @@ fun sendHttpCommand(command: String, esp32Ip: String) {
 
     })
 }
+
+
 
 @Preview(showBackground = true)
 @Composable

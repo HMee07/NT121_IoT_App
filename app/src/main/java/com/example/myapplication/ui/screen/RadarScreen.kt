@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screen
 
+import android.graphics.drawable.Icon
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,12 +43,16 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.myapplication.ui.component.updateButtonState
 
 
 @Composable
@@ -72,26 +78,61 @@ fun RadarScreen(navController: NavController) {
     // Firebase Realtime Database
     val database = FirebaseDatabase.getInstance()
     val dbReference = database.reference
+    val scope = rememberCoroutineScope()
+
 
     // Trạng thái cho chế độ radar toàn màn hình
     val isFullScreen = remember { mutableStateOf(false) }
 
+//
+//    // Hàm gửi dữ liệu tới Firebase
+//    fun sendCommandToFirebase(path: String, value: Any) {
+//        coroutineScope.launch {
+//            try {
+//                dbReference.child(path).setValue(value).await()
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(context, "Gửi lệnh: $value", Toast.LENGTH_SHORT).show()
+//                }
+//            } catch (e: Exception) {
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(context, "Gửi lệnh thất bại", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
 
-    // Hàm gửi dữ liệu tới Firebase
-    fun sendCommandToFirebase(path: String, value: Any) {
+    fun sendCommandToFirebase(commandNumber: Int, value: Boolean) {
         coroutineScope.launch {
             try {
-                dbReference.child(path).setValue(value).await()
+                // Gửi giá trị "true" hoặc "false" tới Firebase với key tương ứng
+                dbReference.child("Code_Number").child(commandNumber.toString()).setValue(value).await()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Gửi lệnh: $value", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Gửi lệnh $commandNumber: $value", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Gửi lệnh thất bại", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Gửi lệnh thất bại: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
+    fun sendAngleToFirebase(angle: Int) {
+        coroutineScope.launch {
+            try {
+                // Gửi góc quét (angle) lên Firebase
+                dbReference.child("Control/Angle").setValue(angle).await()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Gửi góc quét: $angle°", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Gửi lệnh thất bại: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
     // Lắng nghe dữ liệu khoảng cách từ Firebase khi bật chế độ tự động
     LaunchedEffect(isAutoMode.value) {
         if (isAutoMode.value) {
@@ -102,9 +143,27 @@ fun RadarScreen(navController: NavController) {
 
                     // Logic tránh vật cản
                     if (distance in 1..20) {
-                        sendCommandToFirebase("Control/Command", "stop")
+                        // Lấy thêm dữ liệu từ các cảm biến góc trái và phải
+                        dbReference.child("Sensor/LeftDistance").get().addOnSuccessListener { leftSnapshot ->
+                            val leftDistance = leftSnapshot.getValue(Int::class.java) ?: Int.MAX_VALUE
+                            dbReference.child("Sensor/RightDistance").get().addOnSuccessListener { rightSnapshot ->
+                                val rightDistance = rightSnapshot.getValue(Int::class.java) ?: Int.MAX_VALUE
+
+                                if (leftDistance > rightDistance && leftDistance > 20) {
+                                    // Rẽ trái nếu khoảng cách bên trái lớn hơn
+                                    scope.launch { updateButtonState(2, dbReference) } // Gửi lệnh rẽ trái
+                                } else if (rightDistance > 20) {
+                                    // Rẽ phải nếu khoảng cách bên phải lớn hơn
+                                    scope.launch { updateButtonState(3, dbReference) } // Gửi lệnh rẽ phải
+                                } else {
+                                    // Nếu cả hai bên đều bị cản, dừng lại
+                                    scope.launch { updateButtonState(0, dbReference) } // Gửi lệnh dừng
+                                }
+                            }
+                        }
                     } else {
-                        sendCommandToFirebase("Control/Command", "forward")
+                        // Không có vật cản, tiếp tục đi thẳng
+                        scope.launch { updateButtonState(1, dbReference) } // Gửi lệnh đi thẳng
                     }
                 }
 
@@ -113,9 +172,11 @@ fun RadarScreen(navController: NavController) {
                 }
             })
         } else {
-            sendCommandToFirebase("Control/Command", "stop")
+            // Tắt chế độ tự động, dừng xe
+            scope.launch { updateButtonState(0, dbReference) } // Gửi lệnh dừng
         }
     }
+
 
     Column(
         modifier = Modifier
@@ -228,7 +289,7 @@ fun RadarScreen(navController: NavController) {
                                         selectedAngle = selectedAngle.value,
                                         onAngleSelected = { angle ->
                                             selectedAngle.value = angle
-                                            sendCommandToFirebase("Control/Angle", angle)
+                                            sendAngleToFirebase(angle)
                                         }
                                     )
                                     Text("Góc hiện tại: ${selectedAngle.value}°", fontSize = 14.sp)
@@ -293,10 +354,13 @@ fun RadarScreen(navController: NavController) {
 
                                 Button(
                                     onClick = {
-                                        sendCommandToFirebase(
-                                            "Control/Command",
-                                            "forward"
-                                        )
+//                                        sendCommandToFirebase(
+//                                            "Control/Command",
+//                                            "forward"
+//                                        )
+//                                        sendCommandToFirebase(1, true) // Gửi lệnh "Dừng"
+                                        scope.launch { updateButtonState(1, dbReference) }
+
                                     },
                                     modifier = Modifier.size(50.dp),
                                     shape = CircleShape,
@@ -307,22 +371,46 @@ fun RadarScreen(navController: NavController) {
 
                                 Row {
                                     Button(
-                                        onClick = {
-                                            sendCommandToFirebase("Control/Command", "left")
+//                                        onClick = {
+////                                            sendCommandToFirebase("Control/Command", "left")
+//                                            sendCommandToFirebase(3, true) // Gửi lệnh "Dừng"
+//
+//
+//                                        }
+                                                onClick = { scope.launch { updateButtonState(3, dbReference) } },
 
-                                        },
-                                        modifier = Modifier.size(50.dp),
-                                        shape = CircleShape,
-                                    ) { Text("←", color = Color.White, fontSize = 20.sp) }
+                                        modifier = Modifier
+                                            .width(60.dp)
+////                                            .height(60.dp)
+////                                            .size(50.dp) // Giảm kích thước xuống 40.dp
+                                            .clip(CircleShape)
+                                            .background(color = Color.White, shape = CircleShape)
+//                                        shape = CircleShape
+
+                                    ) {
+//                                        Text("←", color = Color.White, fontSize = 20.sp)
+                                        Icon(
+                                            painter = painterResource(id = com.example.myapplication.R.drawable.baseline_arrow_back_ios_new_24),
+                                            contentDescription = "Left",
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .background(color = Color.Transparent, shape = CircleShape),
+                                            tint = Color.White
+                                        )
+
+                                    }
 
                                     Spacer(modifier = Modifier.width(8.dp))
 
                                     Button(
                                         onClick = {
-                                            sendCommandToFirebase(
-                                                "Control/Command",
-                                                "stop"
-                                            )
+//                                            sendCommandToFirebase(
+//                                                "Control/Command",
+//                                                "stop"
+//                                            )
+//                                            sendCommandToFirebase(0, true) // Gửi lệnh "Dừng"
+                                            scope.launch { updateButtonState(0, dbReference) }
+
                                         },
                                         modifier = Modifier.size(50.dp),
                                         shape = CircleShape,
@@ -332,24 +420,29 @@ fun RadarScreen(navController: NavController) {
 
                                     Button(
                                         onClick = {
-                                            sendCommandToFirebase(
-                                                "Control/Command",
-                                                "right"
-                                            )
+//                                            sendCommandToFirebase(
+//                                                "Control/Command",
+//                                                "right"
+//                                            )
+//                                            sendCommandToFirebase(4, true) // Gửi lệnh "Dừng"
+                                            scope.launch { updateButtonState(4, dbReference) }
+
                                         },
                                         modifier = Modifier.size(50.dp),
                                         shape = CircleShape,
                                     ) { Text("→", color = Color.White, fontSize = 20.sp) }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-
-
+                                
                                 Button(
                                     onClick = {
-                                        sendCommandToFirebase(
-                                            "Control/Command",
-                                            "backward"
-                                        )
+//                                        sendCommandToFirebase(
+//                                            "Control/Command",
+//                                            "backward"
+//                                        )
+//                                        sendCommandToFirebase(2, true) // Gửi lệnh "Dừng"
+                                        scope.launch { updateButtonState(2, dbReference) }
+
                                     },
                                     modifier = Modifier.size(50.dp),
                                     shape = CircleShape,
@@ -357,11 +450,19 @@ fun RadarScreen(navController: NavController) {
                             }
                         }
 
-//
-
-                        // Nút quay lại
+                        // Đặt trạng thái về false khi thoát giao diện
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                scope.launch(Dispatchers.IO) {
+                                    dbReference.child("Car_Support/Giao_Dien").child("Tranh_Vat").setValue("false").await()
+                                }
+                            }
+                        }
+                                          // Nút quay lại
                         Button(
-                            onClick = { navController.popBackStack() },
+                            onClick = {
+                                navController.navigate("main")
+                                },
 //                modifier = Modifier.fillMaxWidth()
                             modifier = Modifier
                                 .padding(top = 16.dp),
@@ -377,6 +478,8 @@ fun RadarScreen(navController: NavController) {
         }
     }
 }
+
+
 
 //
 //@Composable

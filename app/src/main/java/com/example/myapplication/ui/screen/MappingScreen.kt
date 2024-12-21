@@ -34,17 +34,13 @@ data class MapPoint(
 @Composable
 fun MappingScreen(navController: NavController) {
     val context = LocalContext.current
-//    var isScanning by remember { mutableStateOf(false) }
     var mapData by remember { mutableStateOf<List<MapPoint>>(emptyList()) }
     var area by remember { mutableStateOf(0f) }
     var scanStatus by remember { mutableStateOf("Chưa quét") }
-    var isScanning = scanStatus != "mapping_completed"
-
+    var isScanning by remember { mutableStateOf(scanStatus != "mapping_completed") }
 
     val scope = rememberCoroutineScope()
-
     val database = FirebaseDatabase.getInstance()
-
     val dbReference = database.reference
 
     // Hàm tính diện tích sử dụng công thức Shoelace
@@ -66,7 +62,23 @@ fun MappingScreen(navController: NavController) {
     }
 
     // Hàm gửi lệnh lên Firebase (dựa vào mã lệnh)
-    fun updateButtonState(button: Int, database: DatabaseReference) {
+//    fun updateButtonState(button: Int, database: DatabaseReference) {
+//        val commands = listOf("0", "1", "2", "3", "4") // Các mã lệnh Dừng, Tiến, Lùi, Trái, Phải
+//        val updates = mutableMapOf<String, Any>()
+//
+//        commands.forEach {
+//            updates[it] = if (it == button.toString()) "true" else "false"
+//        }
+//
+//        database.child("Car_Control/Control").updateChildren(updates).addOnCompleteListener { task ->
+//            if (task.isSuccessful) {
+//                Toast.makeText(context, "Lệnh đã được gửi thành công: $button", Toast.LENGTH_SHORT).show()
+//            } else {
+//                Toast.makeText(context, "Lỗi khi gửi lệnh: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+//            }
+//        }
+//    }
+    fun updateButtonState(button: Int, controlRef: DatabaseReference) {
         val commands = listOf("0", "1", "2", "3", "4") // Các mã lệnh Dừng, Tiến, Lùi, Trái, Phải
         val updates = mutableMapOf<String, Any>()
 
@@ -74,7 +86,7 @@ fun MappingScreen(navController: NavController) {
             updates[it] = if (it == button.toString()) "true" else "false"
         }
 
-        database.child("Car_Control/Control").updateChildren(updates).addOnCompleteListener { task ->
+        controlRef.updateChildren(updates).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Toast.makeText(context, "Lệnh đã được gửi thành công: $button", Toast.LENGTH_SHORT).show()
             } else {
@@ -82,6 +94,7 @@ fun MappingScreen(navController: NavController) {
             }
         }
     }
+
 
     // Lắng nghe dữ liệu từ Firebase
     fun listenToFirebase() {
@@ -108,7 +121,27 @@ fun MappingScreen(navController: NavController) {
         })
 
         // Lắng nghe trạng thái quét
+
+        // Lắng nghe trạng thái quét
         statusRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (!snapshot.exists()) {
+                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
+                isScanning = scanStatus != "mapping_completed"
+                if (scanStatus == "mapping_completed") {
+                    area = calculateArea(mapData)
+                    Toast.makeText(context, "Diện tích mặt đáy: $area cm²", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+//        statusRef.addValueEventListener(object : ValueEventListener {
 //            override fun onDataChange(snapshot: DataSnapshot) {
 //                scanStatus = snapshot.getValue(String::class.java) ?: "Chưa quét"
 //                if (scanStatus == "mapping_completed") {
@@ -118,28 +151,28 @@ fun MappingScreen(navController: NavController) {
 //                }
 //            }
 
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (!snapshot.exists()) {
-                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                val points = mutableListOf<MapPoint>()
-                for (pointSnapshot in snapshot.children) {
-                    val x = pointSnapshot.child("x").getValue(Float::class.java) ?: 0f
-                    val y = pointSnapshot.child("y").getValue(Float::class.java) ?: 0f
-                    val distance = pointSnapshot.child("distance").getValue(Float::class.java) ?: 0f
-                    val angle = pointSnapshot.child("angle").getValue(Float::class.java) ?: 0f
-                    points.add(MapPoint(x, y, distance, angle))
-                }
-                mapData = points
-            }
+//            override fun onDataChange(snapshot: DataSnapshot) {
+//                if (!snapshot.exists()) {
+//                    Toast.makeText(context, "Dữ liệu không tồn tại!", Toast.LENGTH_SHORT).show()
+//                    return
+//                }
+//                val points = mutableListOf<MapPoint>()
+//                for (pointSnapshot in snapshot.children) {
+//                    val x = pointSnapshot.child("x").getValue(Float::class.java) ?: 0f
+//                    val y = pointSnapshot.child("y").getValue(Float::class.java) ?: 0f
+//                    val distance = pointSnapshot.child("distance").getValue(Float::class.java) ?: 0f
+//                    val angle = pointSnapshot.child("angle").getValue(Float::class.java) ?: 0f
+//                    points.add(MapPoint(x, y, distance, angle))
+//                }
+//                mapData = points
+//            }
 
 
 
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+//            override fun onCancelled(error: DatabaseError) {
+//                Toast.makeText(context, "Lỗi khi tải trạng thái quét: ${error.message}", Toast.LENGTH_SHORT).show()
+//            }
+//        })
     }
 
     // Hàm tự động quét
@@ -211,24 +244,7 @@ fun MappingScreen(navController: NavController) {
             }
         }
 
-//        // Các nút điều khiển
-//        Button(
-//            onClick = {
-//                if (!isScanning) {
-//                    isScanning = true
-//                    autoMapping()
-//                } else {
-//                    isScanning = false
-//                    updateButtonState(0, database.getReference(""))
-//                }
-//            },
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(8.dp),
-//            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color.Red else Color.Blue)
-//        ) {
-//            Text(if (isScanning) "Dừng Quét" else "Bắt Đầu Quét", color = Color.White)
-//        }
+//
 //      Các nút điều khiển
         Button(
             onClick = {

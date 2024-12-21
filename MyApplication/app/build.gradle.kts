@@ -38,43 +38,35 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.0"
+    }
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.core.ktx.v1120)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v261)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.navigation.runtime.ktx)
-    implementation(libs.androidx.navigation.compose)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.ui.v150)
+    implementation(libs.androidx.material3.v110)
+    implementation(libs.androidx.navigation.compose.v253)
+    implementation(libs.okhttp.v4110)
+    implementation(libs.androidx.core.splashscreen)
 
-    implementation(libs.androidx.foundation)
-
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    //firebase
+    implementation(libs.google.firebase.analytics)
+    implementation(libs.com.google.firebase.firebase.database.ktx)
+    implementation(libs.kotlinx.coroutines.play.services.v173)
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.database.ktx)
 
-    implementation(libs.androidx.compose.ui.ui)
-    implementation(libs.androidx.compose.material3.material3)
-    implementation(libs.androidx.navigation.compose.v253)
-    implementation(libs.okhttp)
-    implementation(libs.androidx.ui.v153)
-    implementation(libs.androidx.material3.v111)
-    implementation(libs.androidx.compose.ui.ui.tooling.preview)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.kotlinx.coroutines.play.services)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.play.services)
+    // Test dependencies
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit.v115)
+    androidTestImplementation(libs.androidx.espresso.core.v351)
+    debugImplementation(libs.androidx.ui.tooling.v150)
+    debugImplementation(libs.androidx.ui.test.manifest.v150)
+    implementation(libs.androidx.material3.v110)
 
 }

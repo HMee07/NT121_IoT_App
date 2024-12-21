@@ -32,15 +32,30 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
+import androidx.annotation.DrawableRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import okhttp3.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
+import okio.ByteString
 import java.util.concurrent.TimeUnit
+
+// Biến toàn cục
+val database = FirebaseDatabase.getInstance()
+val radarRef = database.getReference("Radar")
+val codeNumberRef = database.getReference("Code_Number")
+val codeGDRef = database.getReference("Code_Giaodien")
+val lightRef = database.getReference("Light")
 
 sealed class Screen {
     object Menu : Screen()
@@ -50,7 +65,7 @@ sealed class Screen {
     object ObstacleAvoidance : Screen()
     object RemoteControl : Screen()
     object LineTracking : Screen()
-    object Screenshot : Screen()
+    object Mapping : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,7 +82,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigator() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Menu) }
 
-    // Hàm trở về Menu
+    // Hàm quay lại Menu
     val navigateBack = { currentScreen = Screen.Menu }
 
     when (currentScreen) {
@@ -78,7 +93,7 @@ fun AppNavigator() {
         is Screen.ObstacleAvoidance -> EmptyScreen("Chạy xe tránh vật cản", onNavigateBack = navigateBack)
         is Screen.RemoteControl -> EmptyScreen("Điều khiển xe bằng remote", onNavigateBack = navigateBack)
         is Screen.LineTracking -> EmptyScreen("Dò line", onNavigateBack = navigateBack)
-        is Screen.Screenshot -> EmptyScreen("Chụp màn hình và lưu Drive", onNavigateBack = navigateBack)
+        is Screen.Mapping -> EmptyScreen("Dò map", onNavigateBack = navigateBack)
     }
 }
 
@@ -92,25 +107,76 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Menu Chính", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-        Button(onClick = { onNavigate(Screen.Radar) }) { Text("Giao diện Radar") }
-        Button(onClick = { onNavigate(Screen.CarControl) }) { Text("Điều khiển xe và camera") }
-        Button(onClick = { onNavigate(Screen.DrawLine) }) { Text("Vẽ đường đi") }
-        Button(onClick = { onNavigate(Screen.ObstacleAvoidance) }) { Text("Chạy xe tránh vật cản") }
-        Button(onClick = { onNavigate(Screen.RemoteControl) }) { Text("Điều khiển xe bằng remote") }
-        Button(onClick = { onNavigate(Screen.LineTracking) }) { Text("Dò line") }
-        Button(onClick = { onNavigate(Screen.Screenshot) }) { Text("Chụp màn hình và lưu Drive") }
+        Text(
+            "Menu Chính",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White
+        )
+
+        // Các item menu với hình ảnh minh họa
+        MenuItem(imageRes = R.drawable.radar_icon, label = "Giao diện Radar") {
+            onNavigate(Screen.Radar)
+        }
+        MenuItem(imageRes = R.drawable.car_control, label = "Điều khiển xe và camera") {
+            onNavigate(Screen.CarControl)
+        }
+        MenuItem(imageRes = R.drawable.draw_line, label = "Vẽ đường đi") {
+            onNavigate(Screen.DrawLine)
+        }
+        MenuItem(imageRes = R.drawable.avoid_icon, label = "Chạy xe tránh vật cản") {
+            onNavigate(Screen.ObstacleAvoidance)
+        }
+        MenuItem(imageRes = R.drawable.remote_control, label = "Điều khiển xe bằng remote") {
+            onNavigate(Screen.RemoteControl)
+        }
+        MenuItem(imageRes = R.drawable.line_tracking, label = "Dò line") {
+            onNavigate(Screen.LineTracking)
+        }
+        MenuItem(imageRes = R.drawable.screenshot_icon, label = "Dò map") {
+            onNavigate(Screen.Mapping)
+        }
     }
 }
+
+@Composable
+fun MenuItem(@DrawableRes imageRes: Int, label: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = label,
+                modifier = Modifier
+                    .size(60.dp)
+                    .padding(start = 8.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White
+            )
+        }
+    }
+}
+
 data class RadarData(val KhoangCach: Int = 0, val Goc: Int = 0)
 
 @Composable
 fun RadarScreen(onNavigateBack: () -> Unit) {
     var radarDataList by remember { mutableStateOf<List<RadarData>>(emptyList()) }
     var sweepAngle by remember { mutableStateOf(180f) }
-    val database = FirebaseDatabase.getInstance()
-    val radarRef = database.getReference("Radar")
-    val codeNumberRef = database.getReference("Code_Number")
     var isScanning by remember { mutableStateOf(false) } // Biến trạng thái quét
 
     // Hàm khởi động quét
@@ -225,40 +291,21 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-class WebSocketManager(private val url: String) {
+class WebSocketClient(private val onImageReceived: (ByteArray) -> Unit) {
+
+    private val client = OkHttpClient()
     private var webSocket: WebSocket? = null
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .build()
 
-    var onImageReceived: ((Bitmap) -> Unit)? = null
-    var onTextMessage: ((String) -> Unit)? = null
-
-    fun connect() {
+    fun connect(url: String) {
         val request = Request.Builder().url(url).build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                println("WebSocket connected")
-            }
-
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                // Giả sử dữ liệu là Base64, chuyển đổi thành Bitmap
-                try {
-                    val decodedBytes = Base64.decode(text, Base64.DEFAULT)
-                    val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
-                    if (bitmap != null) {
-                        onImageReceived?.invoke(bitmap)
-                    } else {
-                        onTextMessage?.invoke("Không thể giải mã hình ảnh")
-                    }
-                } catch (e: Exception) {
-                    onTextMessage?.invoke("Dữ liệu không hợp lệ: ${e.message}")
-                }
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                // Nhận dữ liệu ảnh và gọi callback
+                onImageReceived(bytes.toByteArray())
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                println("WebSocket connection failed: ${t.message}")
+                t.printStackTrace()
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -268,38 +315,30 @@ class WebSocketManager(private val url: String) {
     }
 
     fun disconnect() {
-        webSocket?.close(1000, "Client closed connection")
+        webSocket?.close(1000, "Goodbye!")
     }
 }
-
-
-class CameraViewModel : ViewModel() {
-    private val webSocketManager = WebSocketManager("wss://server-esp32-yc5t.onrender.com")
-    val imageBitmap = mutableStateOf<Bitmap?>(null)
-    val statusMessage = mutableStateOf("Đang kết nối WebSocket...")
-
-    init {
-        webSocketManager.onImageReceived = { bitmap ->
-            imageBitmap.value = bitmap
-            statusMessage.value = "Hình ảnh mới đã nhận"
-        }
-        webSocketManager.onTextMessage = { message ->
-            statusMessage.value = message
-        }
-        webSocketManager.connect()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        webSocketManager.disconnect()
-    }
-}
-
 @Composable
-fun CarControlScreen(onNavigateBack: () -> Unit, cameraViewModel: CameraViewModel = viewModel()) {
-    val imageBitmap by cameraViewModel.imageBitmap
-    val statusMessage by cameraViewModel.statusMessage
+fun CarControlScreen(onNavigateBack: () -> Unit) { val context = LocalContext.current
+    val imageBitmap = remember { mutableStateOf<ImageBitmap?>(null) }
 
+    // WebSocket client
+    val webSocketClient = remember {
+        WebSocketClient { byteArray ->
+            val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+            imageBitmap.value = bitmap.asImageBitmap()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        webSocketClient.connect("ws://3.233.123.220:3000")
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            webSocketClient.disconnect()
+        }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         // Nút Trở về
         Button(
@@ -311,80 +350,98 @@ fun CarControlScreen(onNavigateBack: () -> Unit, cameraViewModel: CameraViewMode
             Text("Trở về")
         }
 
-        // Hiển thị hình ảnh hoặc trạng thái
-        if (imageBitmap != null) {
-            Image(
-                bitmap = imageBitmap!!.asImageBitmap(),
-                contentDescription = "Hình ảnh từ ESP32-CAM",
-                modifier = Modifier
-                    .size(300.dp)
-                    .align(Alignment.Center)
-            )
-        } else {
-            Text(
-                text = statusMessage,
-                modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.bodyLarge
+        // Hiển thị video stream
+        Box(modifier = Modifier.align(Alignment.Center)) {
+            imageBitmap.value?.let { bitmap ->
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = "Video Stream",
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } ?: Text(
+                text = "Loading video stream...",
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
-
         // Các nút điều khiển
         Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            Row(
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                //Trái
+                // Button Kèn
                 Button(
-                    onClick = {},
+                    onClick = {codeNumberRef.child("5").setValue("true")},
                     shape = RoundedCornerShape(0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     modifier = Modifier
-                        .width(70.dp)
-                        .height(90.dp)
-                ) {}
-                //Phải
-                Button(
-                    onClick = {},
-                    shape = RoundedCornerShape(0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
-                    modifier = Modifier
-                        .width(70.dp)
-                        .height(90.dp)
-                ) {}
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.horn_icon), // Hình ảnh cái kèn
+                        contentDescription = "Kèn",
+                        modifier = Modifier.size(100.dp)
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Trái
+                    Button(
+                        onClick = { codeNumberRef.child("3").setValue("true")},
+                        shape = RoundedCornerShape(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(90.dp)
+                    ) {}
+                    // Phải
+                    Button(
+                        onClick = {codeNumberRef.child("4").setValue("true")},
+                        shape = RoundedCornerShape(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(90.dp)
+                    ) {}
+                }
             }
+
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                //Stop
+                // Stop
                 Button(
-                    onClick = {},
+                    onClick = { codeNumberRef.child("0").setValue("true")},
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                     modifier = Modifier
                         .width(70.dp)
                         .height(90.dp)
                 ) {}
+
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    //Lên
+                    // Lên
                     Button(
-                        onClick = {},
+                        onClick = {codeNumberRef.child("1").setValue("true")},
                         shape = RoundedCornerShape(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
                         modifier = Modifier
                             .width(70.dp)
                             .height(40.dp)
                     ) {}
-                    //Xuống
+                    // Xuống
                     Button(
-                        onClick = {},
+                        onClick = { codeNumberRef.child("2").setValue("true")},
                         shape = RoundedCornerShape(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
                         modifier = Modifier
@@ -394,6 +451,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit, cameraViewModel: CameraViewMode
                 }
             }
         }
+
     }
 }
 

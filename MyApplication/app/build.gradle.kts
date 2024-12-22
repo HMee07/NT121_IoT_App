@@ -60,6 +60,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.database.ktx)
+    implementation(libs.androidx.animation.core)
 
     // Test dependencies
     testImplementation(libs.junit)

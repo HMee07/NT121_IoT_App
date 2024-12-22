@@ -27,7 +27,7 @@ import androidx.compose.ui.res.painterResource
 // Biến toàn cục dùng để up lên firebase
 val database = FirebaseDatabase.getInstance()
 val GDRef = database.getReference("Interface")
-val radarRef = database.getReference("Radar")
+val radarRef = database.getReference("Rardar")
 val controlRef = database.getReference("Car_Control")
 
 sealed class Screen {

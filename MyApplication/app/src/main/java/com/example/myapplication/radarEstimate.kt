@@ -12,8 +12,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +28,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -166,6 +173,7 @@ fun observeRadarState(
     })
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadarScreen(onNavigateBack: () -> Unit) {
     var radarDataList by remember { mutableStateOf<List<RadarData>>(emptyList()) }
@@ -249,190 +257,216 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
     }
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        // Hàng chứa các nút điều khiển, tiêu đề, sl vật thể
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            //Cột bên trái: các nút điều khiển
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text("Trở về")
-                }
-                Button(
-                    onClick = { startMeasurement() },
-                    enabled = !isScanning,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isScanning) Color.Gray else MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
-                }
-            }
-
-            // Số lượng vật thể ở bên phải
-            val objects = groupObjects(radarDataList)
-            Text(
-                text = buildAnnotatedString {
-                    append("Số lượng vật thể: ")
-                    withStyle(style = SpanStyle(color = Color.Red)) {
-                        append("${objects.size}")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Radar", color = Color.White) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            onNavigateBack()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.icon_back3),
+                            contentDescription = "Back",
+                            tint = Color.Unspecified
+                        )
                     }
                 },
-                color = Color.White, // Màu mặc định cho chữ trắng
-                fontSize = 18.sp,
-                modifier = Modifier
-                    .padding(16.dp)
-            )
-        }
-        // Hiển thị thông báo quét xong
-        if (showScanCompletedMessage) {
-            Text(
-                text = "Đã quét xong",
-                color = Color.Green,
-                fontSize = 18.sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .background(Color.DarkGray, RoundedCornerShape(8.dp))
-                    .padding(8.dp),
-                textAlign = TextAlign.Center
-            )
-            stopMeasurement()
-        }
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
 
-        // Radar và thông tin vật thể
-        Row(
+            )}
+    ) { paddingValues ->
+        paddingValues
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .weight(1f)
+                .background(Color.Black)
         ) {
-            // Radar bên trái
-            Box(
+            Spacer(modifier = Modifier.height(36.dp))
+            // Hàng chứa các nút điều khiển, tiêu đề, sl vật thể
+            Row(
                 modifier = Modifier
-                    .size(550.dp)
-                    .padding(start = 450.dp, end = 1.dp) ,
-                contentAlignment = Alignment.BottomCenter
+                    .fillMaxWidth().padding(start = 28.dp)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
             ) {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
+                //Cột bên trái: các nút điều khiển
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val centerX = size.width / 2
-                    val centerY = size.height
-                    val maxRadius = size.height / 1.2f
-                    val maxDistance = 50f
-                    // Vẽ các vòng cung
-                    for (i in 1..5) {
-                        val radius = (i / 5f) * maxRadius
-                        drawArc(
-                            color = Color(0xFF00FF00),
-                            startAngle = 180f,
-                            sweepAngle = 180f,
-                            useCenter = false,
-                            style = Stroke(width = 2f),
-                            size = Size(radius * 2, radius * 2),
-                            topLeft = Offset(centerX - radius, centerY - radius)
-                        )
+
+                    Button(
+                        onClick = { startMeasurement() },
+                        enabled = !isScanning,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isScanning) Color.Gray else MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
                     }
-                    // Vẽ các vạch chia góc
-                    for (angle in 0..180 step 15) { // Thêm vạch chia nhỏ hơn
-                        val angleRadians = Math.toRadians(angle.toDouble())
-                        val innerRadius = 0f // Tăng chiều dài của vạch cho các góc phụ
-                        val outerRadius = maxRadius
+                }
 
-                        val startX = centerX + innerRadius * cos(angleRadians).toFloat()
-                        val startY = centerY - innerRadius * sin(angleRadians).toFloat()
-                        val endX = centerX + outerRadius * cos(angleRadians).toFloat()
-                        val endY = centerY - outerRadius * sin(angleRadians).toFloat()
+                // Số lượng vật thể ở bên phải
+                val objects = groupObjects(radarDataList)
+                Text(
+                    text = buildAnnotatedString {
+                        append("Số lượng vật thể: ")
+                        withStyle(style = SpanStyle(color = Color.Red)) {
+                            append("${objects.size}")
+                        }
+                    },
+                    color = Color.White, // Màu mặc định cho chữ trắng
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
+            }
+            // Hiển thị thông báo quét xong
+            if (showScanCompletedMessage) {
+                Text(
+                    text = "Đã quét xong",
+                    color = Color.Green,
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .background(Color.DarkGray, RoundedCornerShape(8.dp))
+                        .padding(8.dp),
+                    textAlign = TextAlign.Center
+                )
+                stopMeasurement()
+            }
 
-                        drawLine(
-                            color = Color(0xFF00FF00),
-                            start = Offset(startX, startY),
-                            end = Offset(endX, endY),
-                            strokeWidth = if (angle % 30 == 0) 2f else 1f // Vạch chính dày hơn
-                        )
-                        // Đánh số góc chỉ ở các vạch chính (30°)
-                        if (angle % 30 == 0) {
-                            val textX = centerX + (outerRadius + 20) * cos(angleRadians).toFloat()
-                            val textY = centerY - (outerRadius + 20) * sin(angleRadians).toFloat()
-                            drawContext.canvas.nativeCanvas.drawText(
-                                "$angle°",
-                                textX,
-                                textY,
-                                android.graphics.Paint().apply {
-                                    color = android.graphics.Color.parseColor("#FF00FF00")
-                                    textSize = 24f
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
+            // Radar và thông tin vật thể
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                // Radar bên trái
+                Box(
+                    modifier = Modifier
+                        .size(550.dp)
+                        .padding(start = 450.dp, end = 1.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        val centerX = size.width / 2
+                        val centerY = size.height
+                        val maxRadius = size.height / 1.2f
+                        val maxDistance = 50f
+                        // Vẽ các vòng cung
+                        for (i in 1..5) {
+                            val radius = (i / 5f) * maxRadius
+                            drawArc(
+                                color = Color(0xFF00FF00),
+                                startAngle = 180f,
+                                sweepAngle = 180f,
+                                useCenter = false,
+                                style = Stroke(width = 2f),
+                                size = Size(radius * 2, radius * 2),
+                                topLeft = Offset(centerX - radius, centerY - radius)
                             )
                         }
-                    }
+                        // Vẽ các vạch chia góc
+                        for (angle in 0..180 step 15) { // Thêm vạch chia nhỏ hơn
+                            val angleRadians = Math.toRadians(angle.toDouble())
+                            val innerRadius = 0f // Tăng chiều dài của vạch cho các góc phụ
+                            val outerRadius = maxRadius
 
-                    // Hiệu ứng quét
-                    drawArc(
-                        color = Color(0x2F00FF00), // Màu xanh lá nhạt
-                        startAngle = 180f, // Bắt đầu từ 0 độ
-                        sweepAngle = sweepAngle.value, // Giá trị quét động
-                        useCenter = true,
-                        size = Size(maxRadius * 2, maxRadius * 2),
-                        topLeft = Offset(centerX - maxRadius, centerY - maxRadius)
-                    )
-
-                    // Vẽ vật thể trên radar
-                    radarDataList.forEach { radarData ->
-                        val angleRadians = Math.toRadians(radarData.Goc.toDouble())
-                        val scaledDistance =
-                            (radarData.KhoangCach.coerceIn(0, maxDistance.toInt()) / maxDistance) * maxRadius
-
-                        val endXGreen = centerX + scaledDistance * cos(angleRadians).toFloat()
-                        val endYGreen = centerY - scaledDistance * sin(angleRadians).toFloat()
-
-                        // Luôn vẽ đường xanh (góc quét)
-                        drawLine(
-                            color = Color(0xFF00FF00),
-                            start = Offset(centerX, centerY),
-                            end = Offset(endXGreen, endYGreen),
-                            strokeWidth = 3f
-                        )
-                        // Chỉ vẽ đường đỏ khi khoảng cách > 0 (có vật thể)
-                        if (radarData.KhoangCach > 0) {
-                            val endXRed = centerX + maxRadius * cos(angleRadians).toFloat()
-                            val endYRed = centerY - maxRadius * sin(angleRadians).toFloat()
+                            val startX = centerX + innerRadius * cos(angleRadians).toFloat()
+                            val startY = centerY - innerRadius * sin(angleRadians).toFloat()
+                            val endX = centerX + outerRadius * cos(angleRadians).toFloat()
+                            val endY = centerY - outerRadius * sin(angleRadians).toFloat()
 
                             drawLine(
-                                color = Color.Red,
-                                start = Offset(endXGreen, endYGreen),
-                                end = Offset(endXRed, endYRed),
+                                color = Color(0xFF00FF00),
+                                start = Offset(startX, startY),
+                                end = Offset(endX, endY),
+                                strokeWidth = if (angle % 30 == 0) 2f else 1f // Vạch chính dày hơn
+                            )
+                            // Đánh số góc chỉ ở các vạch chính (30°)
+                            if (angle % 30 == 0) {
+                                val textX =
+                                    centerX + (outerRadius + 20) * cos(angleRadians).toFloat()
+                                val textY =
+                                    centerY - (outerRadius + 20) * sin(angleRadians).toFloat()
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    "$angle°",
+                                    textX,
+                                    textY,
+                                    android.graphics.Paint().apply {
+                                        color = android.graphics.Color.parseColor("#FF00FF00")
+                                        textSize = 24f
+                                        textAlign = android.graphics.Paint.Align.CENTER
+                                    }
+                                )
+                            }
+                        }
+
+                        // Hiệu ứng quét
+                        drawArc(
+                            color = Color(0x2F00FF00), // Màu xanh lá nhạt
+                            startAngle = 180f, // Bắt đầu từ 0 độ
+                            sweepAngle = sweepAngle.value, // Giá trị quét động
+                            useCenter = true,
+                            size = Size(maxRadius * 2, maxRadius * 2),
+                            topLeft = Offset(centerX - maxRadius, centerY - maxRadius)
+                        )
+
+                        // Vẽ vật thể trên radar
+                        radarDataList.forEach { radarData ->
+                            val angleRadians = Math.toRadians(radarData.Goc.toDouble())
+                            val scaledDistance =
+                                (radarData.KhoangCach.coerceIn(
+                                    0,
+                                    maxDistance.toInt()
+                                ) / maxDistance) * maxRadius
+
+                            val endXGreen = centerX + scaledDistance * cos(angleRadians).toFloat()
+                            val endYGreen = centerY - scaledDistance * sin(angleRadians).toFloat()
+
+                            // Luôn vẽ đường xanh (góc quét)
+                            drawLine(
+                                color = Color(0xFF00FF00),
+                                start = Offset(centerX, centerY),
+                                end = Offset(endXGreen, endYGreen),
                                 strokeWidth = 3f
                             )
+                            // Chỉ vẽ đường đỏ khi khoảng cách > 0 (có vật thể)
+                            if (radarData.KhoangCach > 0) {
+                                val endXRed = centerX + maxRadius * cos(angleRadians).toFloat()
+                                val endYRed = centerY - maxRadius * sin(angleRadians).toFloat()
+
+                                drawLine(
+                                    color = Color.Red,
+                                    start = Offset(endXGreen, endYGreen),
+                                    end = Offset(endXRed, endYRed),
+                                    strokeWidth = 3f
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Thông tin vật thể bên phải
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
-            )
-            {
-                DisplayObjectInfo(radarDataList = radarDataList)
+                // Thông tin vật thể bên phải
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp)
+                )
+                {
+                    DisplayObjectInfo(radarDataList = radarDataList)
+                }
             }
         }
     }

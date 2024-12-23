@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,19 +18,30 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -77,11 +89,17 @@ class WebSocketClient(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CarControlScreen(onNavigateBack: () -> Unit) {
     val imageBitmap = remember { mutableStateOf<ImageBitmap?>(null) }
     val logMessage = remember { mutableStateOf("Initializing WebSocket...") } // Log trạng thái
-    val sliderValue = remember { mutableStateOf(75f) } // Giá trị mặc định của slider (0-100)
+//    val sliderValue = remember { mutableStateOf(75f) } // Giá trị mặc định của slider (0-100)
+// Gia tri toc do, den xe
+    val speedValue = remember { mutableStateOf(75f) } // Giá trị mặc định của slider (0-100)
+    val lightValue = remember { mutableStateOf(75f) } // Giá trị mặc định của slider (0-100)
+
+    val coroutineScope = rememberCoroutineScope()
 
     // WebSocket client
     val webSocketClient = remember {
@@ -116,10 +134,41 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
         }
     }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Control", color = Color.Black) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            onNavigateBack()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.icon_back3),
+                            contentDescription = "Back",
+                            tint = Color.Unspecified
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
+
+            )}
+    ) { paddingValues -> paddingValues
+
     Box( modifier = Modifier
         .fillMaxSize()
-        .background(Color.Black) )// Đặt nền thành màu đen)
-        {
+//        .background(Color.Black)
+    ){
+        Image(
+            painter = painterResource(id = R.drawable.bg_2),
+            contentDescription = "BG",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds // Cắt ảnh để vừa khít màn hình
+
+        )
+
         // Hiển thị video stream hoặc thông báo log
         Box(
             modifier = Modifier
@@ -141,17 +190,8 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
             )
         }
 
-        // Nút trở về
-        Button(
-            onClick = onNavigateBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
-            Text("Trở về")
-        }
 
-        // Các nút điều khiển
+            // Các nút điều khiển
         Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             Column(
                 modifier = Modifier
@@ -160,21 +200,79 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Nút Kèn
-                Button(
-                    onClick = { controlRef.child("Ken_Xe").setValue("true") },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFF3BD) // Màu vàng
-                    ),
-                    modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
-                    shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
+
+                //slider
+                // Slider Toc đo
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+//                                .align(Alignment.Start)  // Căn góc trên bên phải
+                        .padding(
+                            end = 16.dp,
+//                                        top = 16.dp
+                        ) // Đẩy Slider sát hơn vào bên phải
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.horn_icon),
-                        contentDescription = "Kèn",
-                        modifier = Modifier.fillMaxSize()
+                    // Slider
+                    Slider(
+                        value = speedValue.value,
+                        onValueChange = { newValue ->
+                            speedValue.value = newValue
+                            controlRef.child("Toc_Do").setValue(newValue.toInt())
+                        },
+                        valueRange = 0f..100f,
+                        modifier = Modifier.width(150.dp).rotate(-90f)
+                            .padding(bottom = 20.dp)
+                            .padding(start = 24.dp)// Khoảng cách giữa Icon và Slider // Độ rộng Slider cố định
                     )
+                    Spacer(modifier = Modifier.height(24.dp)) // Tạo khoảng trống giữa Slider và Icon
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically, // Đảm bảo các thành phần căn giữa theo chiều dọc
+                        horizontalArrangement = Arrangement.spacedBy(16.dp) // Tạo khoảng cách giữa các thành phần
+                    ) {
+                        // Icon nhỏ hình cây đèn
+                        Image(
+                            painter = painterResource(id = R.drawable.icon_speed),
+                            contentDescription = "Light Icon",
+                            modifier = Modifier
+                                .size(90.dp)
+                                .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
+                        )
+
+                        // Nút Kèn
+                        Button(
+                            onClick = {
+                                controlRef.child("Ken_Xe").setValue("true")
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFF3BD) // Màu vàng
+                            ),
+                            modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
+                            shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.horn_icon),
+                                contentDescription = "Kèn",
+                                modifier = Modifier.fillMaxSize().size(70.dp)
+                            )
+                        }
+                    }
                 }
+//                // Nút Kèn
+//                Button(
+//                    onClick = { controlRef.child("Ken_Xe").setValue("true") },
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = Color(0xFFFFF3BD) // Màu vàng
+//                    ),
+//                    modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
+//                    shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
+//                ) {
+//                    Image(
+//                        painter = painterResource(id = R.drawable.horn_icon),
+//                        contentDescription = "Kèn",
+//                        modifier = Modifier.fillMaxSize()
+//                    )
+//                }
 
                 // Hàng chứa các nút điều khiển Trái/Phải
                 Row(
@@ -183,23 +281,73 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 ) {
                     // Nút Trái
                     Button(
-                        onClick = { controlRef.child("Cotrol/3").setValue("true") },
+                        onClick = {
+//                            controlRef.child("Cotrol/3").setValue("true")
+                                  },
                         shape = RoundedCornerShape(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
                         modifier = Modifier
                             .width(70.dp)
                             .height(90.dp)
-                    ) {}
+                            .pointerInteropFilter { motionEvent ->
+                                when (motionEvent.action) {
+                                    android.view.MotionEvent.ACTION_DOWN -> {
+                                        // Gửi lệnh "3" khi nhấn giữ nút
+                                        Lenhref.child("Lenh").setValue("3,")
+                                        true
+                                    }
+
+                                    android.view.MotionEvent.ACTION_UP -> {
+                                        // Gửi lệnh "3,0" khi thả nút
+                                        Lenhref.child("Lenh").setValue("3,0")
+                                        true
+                                    }
+
+                                    else -> false
+                                }
+                            }
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.icon_left),
+                            contentDescription = "Trai",
+                            modifier = Modifier.fillMaxSize().size(70.dp)
+                        )
+                    }
 
                     // Nút Phải
                     Button(
-                        onClick = { controlRef.child("Cotrol/4").setValue("true") },
+                        onClick = {
+//                            controlRef.child("Cotrol/4").setValue("true")
+                                  },
                         shape = RoundedCornerShape(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
                         modifier = Modifier
                             .width(70.dp)
                             .height(90.dp)
-                    ) {}
+                            .pointerInteropFilter { motionEvent ->
+                                when (motionEvent.action) {
+                                    android.view.MotionEvent.ACTION_DOWN -> {
+                                        // Gửi lệnh "3" khi nhấn giữ nút
+                                        Lenhref.child("Lenh").setValue("4,")
+                                        true
+                                    }
+
+                                    android.view.MotionEvent.ACTION_UP -> {
+                                        // Gửi lệnh "3,0" khi thả nút
+                                        Lenhref.child("Lenh").setValue("4,0")
+                                        true
+                                    }
+
+                                    else -> false
+                                }
+                            }
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.icon_right),
+                            contentDescription = "Phai",
+                            modifier = Modifier.size(90.dp)
+                        )
+                    }
 
                 }
             }
@@ -207,7 +355,6 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(8.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -229,14 +376,14 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             painter = painterResource(id = R.drawable.light_icon),
                             contentDescription = "Light Icon",
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(70.dp)
                                 .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
                         )
                         // Slider
                         Slider(
-                            value = sliderValue.value,
+                            value = lightValue.value,
                             onValueChange = { newValue ->
-                                sliderValue.value = newValue
+                                lightValue.value = newValue
                                 controlRef.child("Den_Xe").setValue(newValue.toInt()) },
                             valueRange = 0f..100f,
                             modifier = Modifier.width(110.dp) // Độ rộng Slider cố định
@@ -254,7 +401,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Image(
                             painter = painterResource(id = R.drawable.take_icon),
                             contentDescription = "Chụp",
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().size(90.dp)
                         )
                     }
 
@@ -265,15 +412,41 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     ) {
                         // Nút Stop
                         Button(
-                            onClick = { controlRef.child("Cotrol/0").setValue("true") },
+                            onClick = {
+//                                controlRef.child("Cotrol/0").setValue("true")
+                                      },
                             shape = RoundedCornerShape(0.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFDC2626)
+                                containerColor = Color.DarkGray.copy(alpha = 0.7f)
                             ),
                             modifier = Modifier
                                 .width(70.dp)
                                 .height(90.dp)
-                        ) {}
+                                .pointerInteropFilter { motionEvent ->
+                                    when (motionEvent.action) {
+                                        android.view.MotionEvent.ACTION_DOWN -> {
+                                            // Gửi lệnh "3" khi nhấn giữ nút
+                                            Lenhref.child("Lenh").setValue("0")
+                                            true
+                                        }
+
+                                        android.view.MotionEvent.ACTION_UP -> {
+                                            // Gửi lệnh "3,0" khi thả nút
+                                            Lenhref.child("Lenh").setValue("0")
+                                            true
+                                        }
+
+                                        else -> false
+                                    }
+                                }
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.icon_stop),
+
+                                contentDescription = "Dung",
+                                modifier = Modifier.fillMaxSize().size(90.dp)
+                            )
+                        }
 
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -281,27 +454,80 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         ) {
                             // Nút Lên
                             Button(
-                                onClick = { controlRef.child("Cotrol/1").setValue("true") },
+                                onClick = {
+//                                    controlRef.child("Cotrol/1").setValue("true")
+                                          },
                                 shape = RoundedCornerShape(0.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
                                 modifier = Modifier
                                     .width(75.dp)
                                     .height(40.dp)
-                            ) {}
+                                    .pointerInteropFilter { motionEvent ->
+                                        when (motionEvent.action) {
+                                            android.view.MotionEvent.ACTION_DOWN -> {
+                                                // Gửi lệnh "3" khi nhấn giữ nút
+                                                Lenhref.child("Lenh").setValue("1,")
+                                                true
+                                            }
+
+                                            android.view.MotionEvent.ACTION_UP -> {
+                                                // Gửi lệnh "3,0" khi thả nút
+                                                Lenhref.child("Lenh").setValue("1,0")
+                                                true
+                                            }
+
+                                            else -> false
+                                        }
+                                    }
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.icon_up),
+                                    contentDescription = "Tien",
+                                    modifier = Modifier.fillMaxSize().size(90.dp)
+                                )
+                            }
 
                             // Nút Xuống
                             Button(
-                                onClick = { controlRef.child("Cotrol/2").setValue("true") },
+                                onClick = {
+//                                    controlRef.child("Cotrol/2").setValue("true")
+                                          },
                                 shape = RoundedCornerShape(0.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
                                 modifier = Modifier
                                     .width(75.dp)
                                     .height(40.dp)
-                            ) {}
+                                    .pointerInteropFilter { motionEvent ->
+                                        when (motionEvent.action) {
+                                            android.view.MotionEvent.ACTION_DOWN -> {
+                                                // Gửi lệnh "3" khi nhấn giữ nút
+                                                Lenhref.child("Lenh").setValue("2,")
+                                                true
+                                            }
+
+                                            android.view.MotionEvent.ACTION_UP -> {
+                                                // Gửi lệnh "3,0" khi thả nút
+                                                Lenhref.child("Lenh").setValue("2,0")
+                                                true
+                                            }
+
+                                            else -> false
+                                        }
+                                    }
+                            )
+
+                            {
+                                Image(
+                                    painter = painterResource(id = R.drawable.icon_downpng),
+                                    contentDescription = "Lui",
+                                    modifier = Modifier.fillMaxSize().size(90.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
     }
 }

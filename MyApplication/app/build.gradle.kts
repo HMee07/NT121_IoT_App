@@ -61,6 +61,12 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.database.ktx)
     implementation(libs.androidx.animation.core)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.foundation)
 
     // Test dependencies
     testImplementation(libs.junit)
@@ -70,10 +76,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest.v150)
     implementation(libs.androidx.material3.v110)
 
-    //luot che do
-
-    implementation(libs.androidx.foundation) // Phiên bản mới nhất
-
-
+    implementation (libs.accompanist.pager)
+    implementation (libs.accompanist.pager.indicators)
 
 }

@@ -22,7 +22,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.database.*
@@ -251,7 +254,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Hàng chứa các nút điều khiển và góc quét
+        // Hàng chứa các nút điều khiển, tiêu đề, sl vật thể
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -259,33 +262,43 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Button(
-                onClick = onNavigateBack,
-                modifier = Modifier.padding(end = 8.dp)
+            //Cột bên trái: các nút điều khiển
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Trở về")
-            }
-            Button(
-                onClick = { startMeasurement() },
-                enabled = !isScanning,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isScanning) Color.Gray else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.padding(end = 8.dp)
-            ) {
-                Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
+                Button(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text("Trở về")
+                }
+                Button(
+                    onClick = { startMeasurement() },
+                    enabled = !isScanning,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isScanning) Color.Gray else MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
+                }
             }
 
+            // Số lượng vật thể ở bên phải
+            val objects = groupObjects(radarDataList)
             Text(
-                text = "Góc quét hiện tại: 10° - 170°",
-                color = Color.White,
+                text = buildAnnotatedString {
+                    append("Số lượng vật thể: ")
+                    withStyle(style = SpanStyle(color = Color.Red)) {
+                        append("${objects.size}")
+                    }
+                },
+                color = Color.White, // Màu mặc định cho chữ trắng
                 fontSize = 18.sp,
                 modifier = Modifier
-                    .background(Color.DarkGray, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(16.dp)
             )
         }
-
         // Hiển thị thông báo quét xong
         if (showScanCompletedMessage) {
             Text(
@@ -311,8 +324,8 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
             // Radar bên trái
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(30.dp),
+                    .size(550.dp)
+                    .padding(start = 450.dp, end = 1.dp) ,
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Canvas(
@@ -323,7 +336,6 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                     val centerY = size.height
                     val maxRadius = size.height / 1.2f
                     val maxDistance = 50f
-
                     // Vẽ các vòng cung
                     for (i in 1..5) {
                         val radius = (i / 5f) * maxRadius
@@ -354,12 +366,10 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                             end = Offset(endX, endY),
                             strokeWidth = if (angle % 30 == 0) 2f else 1f // Vạch chính dày hơn
                         )
-
                         // Đánh số góc chỉ ở các vạch chính (30°)
                         if (angle % 30 == 0) {
                             val textX = centerX + (outerRadius + 20) * cos(angleRadians).toFloat()
                             val textY = centerY - (outerRadius + 20) * sin(angleRadians).toFloat()
-
                             drawContext.canvas.nativeCanvas.drawText(
                                 "$angle°",
                                 textX,
@@ -399,7 +409,6 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                             end = Offset(endXGreen, endYGreen),
                             strokeWidth = 3f
                         )
-
                         // Chỉ vẽ đường đỏ khi khoảng cách > 0 (có vật thể)
                         if (radarData.KhoangCach > 0) {
                             val endXRed = centerX + maxRadius * cos(angleRadians).toFloat()

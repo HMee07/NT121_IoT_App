@@ -1,6 +1,5 @@
 [versions]
-accompanistPager = "0.30.1"
-accompanistPagerIndicators = "0.31.3-beta"
+accompanistPager = "0.31.2-alpha"
 activityComposeVersion = "1.8.2"
 agp = "8.7.2"
 androidxComposeMaterial3Material3 = "1.1.0"
@@ -43,11 +42,12 @@ uiTestManifest = "1.5.0"
 uiTooling = "1.5.0"
 uiVersion = "1.5.3"
 animationCore = "1.2.1"
+foundationLayout = "1.4.1"
+foundationVersion = "1.5.0-alpha01"
 
 [libraries]
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPager" }
-accompanist-pager-indicators-v0313beta = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPagerIndicators" }
 androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
 androidx-compose-bom-v20230901 = { module = "androidx.compose:compose-bom", version.ref = "composeBomVersion" }
 androidx-compose-material3-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
@@ -108,6 +108,8 @@ ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

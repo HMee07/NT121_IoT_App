@@ -1,63 +1,47 @@
 package com.example.myapplication
 
+import MappingScreen
+import com.example.myapplication.ui.screen.autoModeScreen
+import com.example.myapplication.ui.screen.lineTrackingScreen
+import com.example.myapplication.ui.screen.remoteScreen
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import android.os.Bundle
-import android.view.MenuItem
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.google.firebase.FirebaseApp
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
-//import androidx.compose.foundation.pager.HorizontalPagerIndicator
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.vector.VectorProperty.Stroke
+import com.google.accompanist.pager.*
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.screen.MappingScreen
 
-// Biến toàn cục dùng để up lên firebase
+// Firebase references
 val database = FirebaseDatabase.getInstance()
 val GDRef = database.getReference("Interface")
 val controlRef = database.getReference("Car_Control")
-val Lenhref = database.getReference("Car_Control")
 
 sealed class Screen {
     object Menu : Screen()
     object Radar : Screen()
-    object DrawLine : Screen ()
+    object DrawLine : Screen()
     object CarControl : Screen()
     object ObstacleAvoidance : Screen()
     object RemoteControl : Screen()
@@ -66,31 +50,40 @@ sealed class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+    private lateinit var GDRef: DatabaseReference
+    private lateinit var controlRef: DatabaseReference
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this) // Khởi tạo Firebase
+
+        val database = FirebaseDatabase.getInstance()
+        GDRef = database.getReference("Interface")
+        controlRef = database.getReference("Car_Control")
+
         setContent {
             MyApplicationTheme {
-                AppNavigator()
+                AppNavigator(GDRef, controlRef)
             }
         }
     }
 }
 
 @Composable
-fun AppNavigator() {
+fun AppNavigator(GDRef: DatabaseReference, controlRef: DatabaseReference) {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Menu) }
-    // Hàm cập nhật trạng thái giao diện trên Firebase
+
     val updateInterfaceState: (String, Boolean) -> Unit = { screenName, isActive ->
         GDRef.child(screenName).setValue(if (isActive) "true" else "false")
     }
-    // Hàm quay lại Menu
+
     val navigateBack: (String) -> Unit = { screenName ->
-        updateInterfaceState(screenName, false) // Trả về false khi thoát giao diện
+        updateInterfaceState(screenName, false)
         currentScreen = Screen.Menu
     }
+
     when (currentScreen) {
         is Screen.Menu -> MainMenu(onNavigate = { screen ->
-            // Đặt giao diện hiện tại thành true khi vào
             val screenName = when (screen) {
                 is Screen.Radar -> "radarControl"
                 is Screen.CarControl -> "cameraControl"
@@ -102,96 +95,68 @@ fun AppNavigator() {
                 else -> ""
             }
             if (screenName.isNotEmpty()) {
-                updateInterfaceState(screenName, true) // Cập nhật trạng thái giao diện thành true
+                updateInterfaceState(screenName, true)
             }
             currentScreen = screen
         })
         is Screen.Radar -> RadarScreen(onNavigateBack = { navigateBack("radarControl") })
         is Screen.CarControl -> CarControlScreen(onNavigateBack = { navigateBack("cameraControl") })
-        is Screen.DrawLine -> drawLineScreen (onNavigateBack = { navigateBack("drawLine") })
-       is Screen.LineTracking -> lineTrackingScreen (onNavigateBack = { navigateBack("scanLine") })
-       is Screen.Mapping -> MappingScreen (onNavigateBack = { navigateBack("Mapping") })
-       is  Screen.ObstacleAvoidance -> autoModeScreen (onNavigateBack = { navigateBack("avoidObject") })
-        is Screen.RemoteControl -> RemoteScreen (onNavigateBack = { navigateBack("remoteControl") })
+        Screen.DrawLine -> drawLineScreen(onNavigateBack = { navigateBack("drawLine") })
+        Screen.LineTracking -> lineTrackingScreen(onNavigateBack = { navigateBack("scanLine") })
+        Screen.Mapping -> MappingScreen(onNavigateBack = { navigateBack("Mapping") })
+        Screen.ObstacleAvoidance -> autoModeScreen(onNavigateBack = { navigateBack("avoidObject") })
+        Screen.RemoteControl -> remoteScreen(onNavigateBack = { navigateBack("remoteControl") })
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 fun MainMenu(onNavigate: (Screen) -> Unit) {
-    val scrollState = rememberScrollState()
+    val pagerState = rememberPagerState(initialPage = 0)
 
-    val pageCount = 6 // Số trang
-
-    val pagerState = rememberPagerState(
-        initialPage = 0, // Trang ban đầu
-        pageCount = { 6 } // Số lượng trang
-    )
-    val coroutineScope = rememberCoroutineScope()
-
-    Box {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.bg_3),
-            contentDescription = "BG",
+            contentDescription = "Background",
             modifier = Modifier.fillMaxSize()
-                .width(2560.dp)
-                .height(1600.dp)
         )
-
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-//                .background(Color.Black)
-                .padding(32.dp)
-                .verticalScroll(scrollState), // Thêm khả năng cuộn
-
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.spacedBy(12.dp)
-            verticalArrangement = Arrangement.Center // Căn giữa theo chiều dọc
-
+            verticalArrangement = Arrangement.Center
         ) {
-
             Text(
                 text = "MENU CHÍNH",
                 color = Color.White,
                 fontSize = 40.sp,
-
-//                modifier = Modifier.shadow(8.dp, shape = RoundedCornerShape(4.dp)),
                 style = TextStyle(
                     shadow = Shadow(
                         color = Color.Gray.copy(alpha = 0.5f),
                         offset = Offset(4f, 4f),
                         blurRadius = 6f
                     ),
-
-                    brush = Brush.verticalGradient( // Sử dụng verticalGradient để áp dụng từ dưới lên trên
-                        colors = listOf(
-                            Color(0xFF30CFD0), // Màu #30cfd0
-                            Color(0xFF330867)  // Màu #330867
-                        )
-                    ),
-
-
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFF30CFD0), Color(0xFF330867))
+                    )
                 )
             )
 
-            //che do chon
-            // HorizontalPager để chọn chế độ
-            // HorizontalPager để chọn chế độ
+            Spacer(modifier = Modifier.height(16.dp))
+
             HorizontalPager(
+                count = 7, // Số lượng trang
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp), // Tăng chiều cao để làm cho phần tử ở giữa nổi bật hơn
-                contentPadding = PaddingValues(horizontal = 32.dp),
-
-                ) { page ->
-                // Căn giữa từng phần tử trong HorizontalPager
+                    .height(600.dp)
+            ) { page ->
                 Box(
                     modifier = Modifier
-                        .fillMaxSize(), // Bố cục ngang bằng toàn bộ trang
-                    contentAlignment = Alignment.Center // Căn giữa nội dung trong mỗi trang
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     MenuOption(
                         imageRes = when (page) {
@@ -200,9 +165,8 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
                             2 -> R.drawable.draw_line
                             3 -> R.drawable.avoid_icon
                             4 -> R.drawable.remote_control
-
-
-                            else -> R.drawable.line_tracking
+                            5 -> R.drawable.line_tracking
+                            else -> R.drawable.mapping
                         },
                         label = when (page) {
                             0 -> "Giao diện Radar"
@@ -210,9 +174,8 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
                             2 -> "Vẽ đường đi"
                             3 -> "Auto Mode"
                             4 -> "Remote Control"
-
-
-                            else -> "Dò line"
+                            5 -> "Dò line"
+                            else -> "Mapping"
                         },
                         onClick = {
                             onNavigate(
@@ -222,189 +185,63 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
                                     2 -> Screen.DrawLine
                                     3 -> Screen.ObstacleAvoidance
                                     4 -> Screen.RemoteControl
-
-
-                                    else -> Screen.LineTracking
+                                    5 -> Screen.LineTracking
+                                    else -> Screen.Mapping
                                 }
                             )
                         },
-                        isSelected = pagerState.currentPage == page // Xác định trạng thái chọn
+                        isSelected = pagerState.currentPage == page
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-//            // Nút điều hướng (Trái/Phải)
-//            Row(
-//                modifier = Modifier.fillMaxWidth(),
-//                horizontalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                Button(
-//                    onClick = {
-//                        coroutineScope.launch {
-//                            pagerState.animateScrollToPage(
-//                                (pagerState.currentPage - 1).coerceAtLeast(0)
-//                            )
-//                        }
-//                    },
-//                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-//                ) {
-//                    Text("Trái", color = Color.White)
-//                }
-//
-//                Button(
-//                    onClick = {
-//                        coroutineScope.launch {
-//                            pagerState.animateScrollToPage(
-//                                (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
-//                            )
-//                        }
-//                    },
-//                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-//                ) {
-//                    Text("Phải", color = Color.White)
-//                }
-//            }
-
-            // Hiển thị chỉ số trang hiện tại
             HorizontalPagerIndicator(
                 pagerState = pagerState,
                 activeColor = Color.White,
                 inactiveColor = Color.Gray,
-                modifier = Modifier
-                    .align(
-                        Alignment.CenterHorizontally
-
-                    )
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         }
     }
 }
 
-    @Composable
-    fun HorizontalPagerIndicator(
-        pagerState: PagerState,
-        activeColor: Color,
-        inactiveColor: Color,
-        modifier: Modifier = Modifier
-    ) {
-        Row(
-            modifier = modifier,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            for (i in 0 until pagerState.pageCount) {
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(8.dp)
-                        .background(
-                            color = if (pagerState.currentPage == i) activeColor else inactiveColor,
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-            }
-        }
-    }
-
-
-
-
-//        // Các item menu với hình ảnh minh họa
-//        MenuItem(imageRes = R.drawable.radar_icon, label = "Giao diện Radar") {
-//            onNavigate(Screen.Radar)
-//        }
-//        MenuItem(imageRes = R.drawable.car_control, label = "Điều khiển xe và camera") {
-//            onNavigate(Screen.CarControl)
-//        }
-//        MenuItem(imageRes = R.drawable.draw_line, label = "Vẽ đường đi") {
-//            onNavigate(Screen.DrawLine)
-//        }
-//        MenuItem(imageRes = R.drawable.avoid_icon, label = "Chạy xe tránh vật cản") {
-//            onNavigate(Screen.ObstacleAvoidance)
-//        }
-//        MenuItem(imageRes = R.drawable.remote_control, label = "Điều khiển xe bằng remote") {
-//            onNavigate(Screen.RemoteControl)
-//        }
-//        MenuItem(imageRes = R.drawable.line_tracking, label = "Dò line") {
-//            onNavigate(Screen.LineTracking)
-//        }
-//        MenuItem(imageRes = R.drawable.screenshot_icon, label = "Dò map") {
-//            onNavigate(Screen.Mapping)
-//        }
-
-
-
 @Composable
-fun MenuItem(@DrawableRes imageRes: Int, label: String, onClick: () -> Unit) {
+fun MenuOption(
+    @DrawableRes imageRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    isSelected: Boolean
+) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
+            .size(300.dp)
             .clickable(onClick = onClick)
-            .padding(4.dp),
+            .padding(8.dp),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFF8BA9C7) else Color.DarkGray
+        )
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = label,
-                modifier = Modifier
-                    .size(60.dp)
-                    .padding(start = 8.dp)
+                modifier = Modifier.size(120.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge
             )
         }
     }
 }
-    @Composable
-    fun MenuOption(
-        @DrawableRes imageRes: Int,
-        label: String,
-        onClick: () -> Unit,
-        isSelected: Boolean = false // Trạng thái chọn
-    ) {
-        val elevation = if (isSelected) 12.dp else 6.dp // Tăng độ sâu khi được chọn
-        val borderColor = if (isSelected) Color.Cyan else Color.Transparent // Thay đổi màu viền khi chọn
-
-        Card(
-            modifier = Modifier
-                .size(400.dp)
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(elevation),
-            border = BorderStroke(2.dp, borderColor), // Viền nổi bật khi chọn
-            colors = CardDefaults.cardColors(containerColor = Color.DarkGray.copy(alpha = 0.7f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = label,
-                    modifier = Modifier.size(250.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }

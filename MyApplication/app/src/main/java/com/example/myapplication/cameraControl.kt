@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.widget.ImageButton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -172,7 +174,8 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
         // Hiển thị video stream hoặc thông báo log
         Box(
             modifier = Modifier
-                .size(300.dp) // Kích thước Box cố định
+                .width(550.dp) // Kích thước Box cố định
+                .height(400.dp)
                 .align(Alignment.Center)
                 .background(Color.Gray) // Màu nền cho Box
         ) {
@@ -236,7 +239,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             contentDescription = "Light Icon",
                             modifier = Modifier
                                 .size(90.dp)
-                                .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
+                                .padding(end = 0.dp) // Khoảng cách giữa Icon và Slider
                         )
 
                         // Nút Kèn
@@ -250,10 +253,11 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
                             shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
                         ) {
+
                             Image(
                                 painter = painterResource(id = R.drawable.horn_icon),
                                 contentDescription = "Kèn",
-                                modifier = Modifier.fillMaxSize().size(70.dp)
+                                modifier = Modifier.size(70.dp).padding(0.dp).scale(2f)
                             )
                         }
                     }
@@ -310,7 +314,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Image(
                             painter = painterResource(id = R.drawable.icon_left),
                             contentDescription = "Trai",
-                            modifier = Modifier.fillMaxSize().size(70.dp)
+                            modifier = Modifier.size(70.dp).scale(4f)
                         )
                     }
 
@@ -345,7 +349,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Image(
                             painter = painterResource(id = R.drawable.icon_right),
                             contentDescription = "Phai",
-                            modifier = Modifier.size(90.dp)
+                            modifier = Modifier.size(90.dp).scale(4f)
                         )
                     }
 
@@ -401,7 +405,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Image(
                             painter = painterResource(id = R.drawable.take_icon),
                             contentDescription = "Chụp",
-                            modifier = Modifier.fillMaxSize().size(90.dp)
+                            modifier = Modifier.fillMaxSize().size(90.dp).scale(2f)
                         )
                     }
 
@@ -444,7 +448,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 painter = painterResource(id = R.drawable.icon_stop),
 
                                 contentDescription = "Dung",
-                                modifier = Modifier.fillMaxSize().size(90.dp)
+                                modifier = Modifier.fillMaxSize().size(90.dp).scale(4f)
                             )
                         }
 
@@ -483,7 +487,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 Image(
                                     painter = painterResource(id = R.drawable.icon_up),
                                     contentDescription = "Tien",
-                                    modifier = Modifier.fillMaxSize().size(90.dp)
+                                    modifier = Modifier.fillMaxSize().size(90.dp).scale(3f)
                                 )
                             }
 
@@ -520,7 +524,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 Image(
                                     painter = painterResource(id = R.drawable.icon_downpng),
                                     contentDescription = "Lui",
-                                    modifier = Modifier.fillMaxSize().size(90.dp)
+                                    modifier = Modifier.fillMaxSize().size(90.dp).scale(3f)
                                 )
                             }
                         }

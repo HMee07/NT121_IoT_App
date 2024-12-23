@@ -1,6 +1,8 @@
 package com.example.myapplication
 
+import android.R.attr.tint
 import android.graphics.BitmapFactory
+import android.graphics.ColorFilter
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,9 +46,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter.Companion.tint
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -115,6 +119,8 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
     var isAutoModeEnabled by remember { mutableStateOf(false) }
     // Hàm bật/tắt chế độ và gửi dữ liệu đến Firebase
     val coroutineScope = rememberCoroutineScope()
+    // Hàm ánh xạ giá trị đèn thành màu sắc
+
 
     fun toggleMode(mode: String, isEnabled: Boolean) {
         coroutineScope.launch {
@@ -163,6 +169,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
         }
     }
 
+
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -170,16 +179,6 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    FirebaseDatabase.getInstance()
-                                        .getReference("Interface/cameraControl")
-                                        .setValue("false").await()
-                                    Log.d("ControlScreen", "Successfully reset 'Control' to false")
-                                } catch (e: Exception) {
-                                    Log.e("ControlScreen", "Failed to reset 'Control' to false", e)
-                                }
-                            }
                             onNavigateBack()
                         }
                     ) {
@@ -190,24 +189,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
-    ) { paddingValues ->
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
+
+            )}
+    ) { paddingValues -> paddingValues
         Box(
             modifier = Modifier
                 .fillMaxSize()
+
 //                .background(Color.White)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xACCBEE), // Mã màu #accbee
-                            Color(0xE7F0FD)  // Mã màu #e7f0fd
-                        ),
-                        start = Offset(0f, Float.POSITIVE_INFINITY), // Gradient bắt đầu từ đáy
-                        end = Offset(0f, 0f) // Gradient kết thúc ở đỉnh
-                    )
-                )
 
 
         )
@@ -216,10 +207,21 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.bg_2),
                 contentDescription = "BG",
-                modifier = Modifier.fillMaxSize()
-                    .width(2560.dp)
-                    .height(1600.dp)
+                modifier = Modifier.fillMaxSize(),
+//                    .width(2560.dp)
+//                    .height(1600.dp)
+                contentScale = ContentScale.FillBounds // Cắt ảnh để vừa khít màn hình
+
             )
+//            // Lớp phủ làm tối ảnh
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .background(
+//                        Color.Black.copy(alpha = (1f - lightValue.value / 100f).coerceIn(0f, 0.7f)) // Làm tối dựa trên lightValue
+//                    )
+//            )
+
             // Hiển thị video stream hoặc thông báo log
             Box(
                 modifier = Modifier
@@ -243,15 +245,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 )
             }
 
-//            // Nút trở về
-//            Button(
-//                onClick = onNavigateBack,
-//                modifier = Modifier
-//                    .align(Alignment.TopStart)
-//                    .padding(8.dp)
-//            ) {
-//                Text("Trở về")
-//            }
+
 
             // Các nút điều khiển
             Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -263,18 +257,20 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    Column (
+                    Column(
                         modifier = Modifier
-                        .padding(8.dp),
+                            .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally)
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    )
                     {
-                        Row(verticalAlignment = Alignment.CenterVertically, // Đảm bảo căn giữa theo chiều dọc
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically, // Đảm bảo căn giữa theo chiều dọc
                             modifier = Modifier
                                 .padding(end = 16.dp) // Đẩy toàn bộ qua bên trái màn hình
-                                ) {
+                        ) {
                             // Slider Toc đo
-                                Column(
+                            Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
 //                                .align(Alignment.Start)  // Căn góc trên bên phải
@@ -297,36 +293,37 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 )
                                 Spacer(modifier = Modifier.height(24.dp)) // Tạo khoảng trống giữa Slider và Icon
 
-                                    Row ( verticalAlignment = Alignment.CenterVertically, // Đảm bảo các thành phần căn giữa theo chiều dọc
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp) // Tạo khoảng cách giữa các thành phần
-                                                 ){
-                                        // Icon nhỏ hình cây đèn
-                                        Image(
-                                            painter = painterResource(id = R.drawable.icon_speed),
-                                            contentDescription = "Light Icon",
-                                            modifier = Modifier
-                                                .size(90.dp)
-                                                .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
-                                        )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically, // Đảm bảo các thành phần căn giữa theo chiều dọc
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp) // Tạo khoảng cách giữa các thành phần
+                                ) {
+                                    // Icon nhỏ hình cây đèn
+                                    Image(
+                                        painter = painterResource(id = R.drawable.icon_speed),
+                                        contentDescription = "Light Icon",
+                                        modifier = Modifier
+                                            .size(90.dp)
+                                            .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
+                                    )
 
-                                        // Nút Kèn
-                                        Button(
-                                            onClick = {
-                                                controlRef.child("Ken_Xe").setValue("true")
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFFFF3BD) // Màu vàng
-                                            ),
-                                            modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
-                                            shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
-                                        ) {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.horn_icon),
-                                                contentDescription = "Kèn",
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-                                        }
+                                    // Nút Kèn
+                                    Button(
+                                        onClick = {
+                                            controlRef.child("Ken_Xe").setValue("true")
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFFF3BD) // Màu vàng
+                                        ),
+                                        modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
+                                        shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.horn_icon),
+                                            contentDescription = "Kèn",
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
+                                }
                             }
                             Spacer(modifier = Modifier.padding(end = 16.dp))
 //                            // Nút Kèn
@@ -347,7 +344,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
 //                                )
 //                            }
                         }
-                        Spacer(modifier = Modifier.padding(end=16.dp))
+                        Spacer(modifier = Modifier.padding(end = 16.dp))
 
 
                         // Hàng chứa các nút điều khiển Trái/Phải
@@ -424,111 +421,12 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         }
                     }
                 }
-                // Nút menu ở góc phải
-                FloatingActionButton(
-                    onClick = { isMenuExpanded = !isMenuExpanded },
-                    containerColor = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            id = if (isMenuExpanded) R.drawable.icon_close else R.drawable.icon_menu
-                        ),
-                        contentDescription = if (isMenuExpanded) "Collapse Menu" else "Expand Menu",
-                        tint = Color.Unspecified
-                    )
-
-                }
-
-                // Menu chế độ (Ẩn/Hiện dựa trên trạng thái)
-                if (isMenuExpanded) {
-                    Column(
-                        modifier = Modifier
-//                        .fillMaxWidth()
-                            .width(600.dp)
-                            .height(500.dp)
-//                            .align(Alignment.BottomCenter)
-                            .align(Alignment.Center)
-                            .background(Color.DarkGray.copy(alpha = 0.9f))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = "Chế độ điều khiển",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        // Nút bật/tắt chế độ Remote Control
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Điều khiển Remote", color = Color.White, fontSize = 16.sp)
-                            Switch(
-                                checked = isRemoteControlEnabled,
-                                onCheckedChange = { isEnabled ->
-                                    isRemoteControlEnabled = isEnabled
-                                    toggleMode("remoteControl", isEnabled)
-                                },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedThumbColor = Color.Green,
-                                    uncheckedThumbColor = Color.Red
-                                )
-                            )
-                        }
-
-                        // Nút bật/tắt chế độ Line Tracking
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Dò Line", color = Color.White, fontSize = 16.sp)
-                            Switch(
-                                checked = isLineTrackingEnabled,
-                                onCheckedChange = { isEnabled ->
-                                    isLineTrackingEnabled = isEnabled
-                                    toggleMode("scanLine", isEnabled)
-                                },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedThumbColor = Color.Green,
-                                    uncheckedThumbColor = Color.Red
-                                )
-                            )
-                        }
-
-                        // Nút bật/tắt chế độ Auto Mode
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Chế độ Tự động", color = Color.White, fontSize = 16.sp)
-                            Switch(
-                                checked = isAutoModeEnabled,
-                                onCheckedChange = { isEnabled ->
-                                    isAutoModeEnabled = isEnabled
-                                    toggleMode("avoidObject", isEnabled)
-                                },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedThumbColor = Color.Green,
-                                    uncheckedThumbColor = Color.Red
-                                )
-                            )
-                        }
-                    }
-                }
+//
                 // Các nút điều khiển bên phải với Slider
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding( 8.dp)
+                        .padding(8.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -605,13 +503,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                                 Lenhref.child("Lenh").setValue("0,")
                                                 true
                                             }
+
                                             android.view.MotionEvent.ACTION_UP -> {
                                                 // Gửi lệnh "0" khi thả nút
                                                 Lenhref.child("Lenh").setValue("0,")
                                                 true
                                             }
+
                                             else -> false
-                                        }}
+                                        }
+                                    }
                             ) {}
 
                             Column(
@@ -622,9 +523,13 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 Button(
                                     onClick = {
 //                                        controlRef.child("Cotrol/1").setValue("true")
-                                              },
+                                    },
                                     shape = RoundedCornerShape(0.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFF1E3A8A
+                                        )
+                                    ),
                                     modifier = Modifier
                                         .width(75.dp)
                                         .height(40.dp)
@@ -651,7 +556,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 Button(
                                     onClick = {
 //                                        controlRef.child("Cotrol/2").setValue("true")
-                                              },
+                                    },
                                     shape = RoundedCornerShape(0.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(
@@ -668,11 +573,13 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                                     Lenhref.child("Lenh").setValue("2,")
                                                     true
                                                 }
+
                                                 android.view.MotionEvent.ACTION_UP -> {
                                                     // Gửi lệnh "2,0" khi thả nút
                                                     Lenhref.child("Lenh").setValue("2,0")
                                                     true
                                                 }
+
                                                 else -> false
                                             }
                                         }
@@ -683,9 +590,5 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 }
             }
         }
-    }}
-@Preview(showBackground = true, widthDp = 800, heightDp = 600)
-@Composable
-fun CarControlScreenPreview() {
-    CarControlScreen(onNavigateBack = {})
-}
+    }
+    }

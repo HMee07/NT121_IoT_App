@@ -1,11 +1,15 @@
 package com.example.myapplication
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -41,21 +45,10 @@ fun autoModeScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Line Tracking", color = Color.White, fontSize = 20.sp) },
+                title = { Text("Auto Mode", color = Color.White, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    // Đặt giá trị Firebase về "false"
-                                    FirebaseDatabase.getInstance()
-                                        .getReference("Interface/lineTracking")
-                                        .setValue("false").await()
-                                    Log.d("LineTrackingScreen", "Successfully reset 'LineTracking' to false")
-                                } catch (e: Exception) {
-                                    Log.e("LineTrackingScreen", "Failed to reset 'LineTracking' to false", e)
-                                }
-                            }
                             onNavigateBack() // Quay lại màn hình trước đó
                         }
                     ) {
@@ -66,67 +59,55 @@ fun autoModeScreen(onNavigateBack: () -> Unit) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.DarkGray)
-            )
-        }
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent, // Làm cho TopAppBar trong suốt
+                    scrolledContainerColor = Color.Transparent
+                )) // Không thay đổi màu khi cuộn            )
+        },
+                containerColor = Color.Transparent // Scaffold trong suốt
+
     ) { paddingValues ->
-        Column(
+        paddingValues
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
-                .padding(paddingValues) // Đảm bảo padding từ Scaffold
-                .verticalScroll(scrollState), // Thêm khả năng cuộn
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center // Căn giữa theo chiều dọc
+                .background(Color.Transparent)
         ) {
-            // Nội dung giao diện
-            Text(
-                text = "Line Tracking Mode",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 32.dp) // Khoảng cách với các thành phần khác
+            Image(
+                painter = painterResource(id = R.drawable.bg_4),
+                contentDescription = "BG",
+                modifier = Modifier.fillMaxSize().width(3000.dp).height(1700.dp),
+
+
             )
-
-            // Nút điều khiển
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        try {
-                            FirebaseDatabase.getInstance()
-                                .getReference("Car_Control/lineTracking/start")
-                                .setValue("true").await()
-                            Log.d("LineTrackingScreen", "Started line tracking")
-                        } catch (e: Exception) {
-                            Log.e("LineTrackingScreen", "Failed to start line tracking", e)
-                        }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan),
-                shape = CircleShape,
-                modifier = Modifier.padding(8.dp)
+            // Nội dung cuộn
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState) // Cho phép cuộn nội dung
+                    .padding(16.dp), // Padding cho nội dung
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Start Tracking", color = Color.Black)
+                // Văn bản "Auto Mode" trên ảnh nền
+                Text(
+                    text = "Auto Mode",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontSize = 48.sp,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                // Thêm các thành phần nội dung khác ở đây nếu cần
+                Text(
+                    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                    color = Color.Black,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
 
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        try {
-                            FirebaseDatabase.getInstance()
-                                .getReference("Car_Control/lineTracking/stop")
-                                .setValue("true").await()
-                            Log.d("LineTrackingScreen", "Stopped line tracking")
-                        } catch (e: Exception) {
-                            Log.e("LineTrackingScreen", "Failed to stop line tracking", e)
-                        }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                shape = CircleShape,
-                modifier = Modifier.padding(8.dp)
-            ) {
-                Text("Stop Tracking", color = Color.White)
-            }
+
         }
+
     }
 }

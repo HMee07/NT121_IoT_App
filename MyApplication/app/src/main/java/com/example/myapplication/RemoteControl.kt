@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,34 +68,11 @@ fun calculate_Object_Width(objectData: List<RemoteControl>): Float {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemoteScreen(onNavigateBack: () -> Unit) {
-    var radarDataList by remember { mutableStateOf<List<RemoteControl>>(emptyList()) }
-    var sweepAngle by remember { mutableStateOf(180f) }
-    var isScanning by remember { mutableStateOf(false) }
-    var currentAngle by remember { mutableStateOf(0) }
 
-    // Trạng thái menu
-    var isMenuExpanded by remember { mutableStateOf(false) }
-
-    // Trạng thái các chế độ
-    var isRemoteControlEnabled by remember { mutableStateOf(false) }
-    var isLineTrackingEnabled by remember { mutableStateOf(false) }
-    var isAutoModeEnabled by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Hàm bật/tắt chế độ và gửi dữ liệu đến Firebase
-    fun toggleMode(mode: String, isEnabled: Boolean) {
-        coroutineScope.launch {
-            try {
-                FirebaseDatabase.getInstance()
-                    .getReference("Interface/$mode")
-                    .setValue(isEnabled.toString()).await()
-                Log.d("RemoteScreen", "$mode set to $isEnabled")
-            } catch (e: Exception) {
-                Log.e("RemoteScreen", "Failed to set $mode: ${e.message}")
-            }
-        }
-    }
+
 
     Scaffold(
         topBar = {
@@ -103,16 +81,6 @@ fun RemoteScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    FirebaseDatabase.getInstance()
-                                        .getReference("Interface/remoteControl")
-                                        .setValue("false").await()
-                                    Log.d("RemoteScreen", "Successfully reset 'Remote' to false")
-                                } catch (e: Exception) {
-                                    Log.e("RemoteScreen", "Failed to reset 'Remote' to false", e)
-                                }
-                            }
                             onNavigateBack()
                         }
                     ) {
@@ -126,160 +94,18 @@ fun RemoteScreen(onNavigateBack: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(paddingValues)
-        ) {
-            // Radar UI
-            RadarView(
-                radarDataList = radarDataList,
-                sweepAngle = sweepAngle,
-                modifier = Modifier.align(Alignment.Center)
-            )
-
-            // Nút menu ở góc phải
-            FloatingActionButton(
-                onClick = { isMenuExpanded = !isMenuExpanded },
-                containerColor = Color.White,
+    ) { paddingValues -> paddingValues
+         Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(
-                    painter = painterResource(
-                        id = if (isMenuExpanded) R.drawable.icon_close else R.drawable.icon_menu
-                    ),
-                    contentDescription = if (isMenuExpanded) "Collapse Menu" else "Expand Menu",
-                    tint = Color.Unspecified
-                )
-            }
-
-            // Menu chế độ (Ẩn/Hiện dựa trên trạng thái)
-            if (isMenuExpanded) {
-                Column(
-                    modifier = Modifier
-//                        .fillMaxWidth()
-                        .width(600.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(Color.DarkGray.copy(alpha = 0.9f))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxSize()
+                    .background(Color.Transparent)
                 ) {
-                    Text(
-                        text = "Chế độ điều khiển",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // Nút bật/tắt chế độ Remote Control
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Điều khiển Remote", color = Color.White, fontSize = 16.sp)
-                        Switch(
-                            checked = isRemoteControlEnabled,
-                            onCheckedChange = { isEnabled ->
-                                isRemoteControlEnabled = isEnabled
-                                toggleMode("remoteControl", isEnabled)
-                            },
-                            colors = androidx.compose.material3.SwitchDefaults.colors(
-                                checkedThumbColor = Color.Green,
-                                uncheckedThumbColor = Color.Red
-                            )
-                        )
-                    }
-
-                    // Nút bật/tắt chế độ Line Tracking
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Dò Line", color = Color.White, fontSize = 16.sp)
-                        Switch(
-                            checked = isLineTrackingEnabled,
-                            onCheckedChange = { isEnabled ->
-                                isLineTrackingEnabled = isEnabled
-                                toggleMode("scanLine", isEnabled)
-                            },
-                            colors = androidx.compose.material3.SwitchDefaults.colors(
-                                checkedThumbColor = Color.Green,
-                                uncheckedThumbColor = Color.Red
-                            )
-                        )
-                    }
-
-                    // Nút bật/tắt chế độ Auto Mode
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Chế độ Tự động", color = Color.White, fontSize = 16.sp)
-                        Switch(
-                            checked = isAutoModeEnabled,
-                            onCheckedChange = { isEnabled ->
-                                isAutoModeEnabled = isEnabled
-                                toggleMode("avoidObject", isEnabled)
-                            },
-                            colors = androidx.compose.material3.SwitchDefaults.colors(
-                                checkedThumbColor = Color.Green,
-                                uncheckedThumbColor = Color.Red
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RadarView(
-    radarDataList: List<RemoteControl>,
-    sweepAngle: Float,
-    modifier: Modifier = Modifier
-) {
-    Canvas(
-        modifier = modifier.size(300.dp)
-    ) {
-        val centerX = size.width / 2
-        val centerY = size.height
-        val maxRadius = size.height / 1.2f
-        val maxDistance = 50f
-
-        // Vẽ các vòng cung
-        for (i in 1..5) {
-            val radius = (i / 5f) * maxRadius
-            drawArc(
-                color = Color(0xFF00FF00),
-                startAngle = 180f,
-                sweepAngle = 180f,
-                useCenter = false,
-                style = Stroke(width = 2f),
-                size = Size(radius * 2, radius * 2),
-                topLeft = Offset(centerX - radius, centerY - radius)
+            Image(
+                painter = painterResource(id = R.drawable.bg_4),
+                contentDescription = "BG",
+                modifier = Modifier.fillMaxSize()
             )
-        }
 
-        // Vẽ các vạch chia góc
-        for (angle in 0..180 step 30) {
-            val angleRadians = Math.toRadians(angle.toDouble())
-            val endX = centerX + maxRadius * cos(angleRadians).toFloat()
-            val endY = centerY - maxRadius * sin(angleRadians).toFloat()
-
-            drawLine(
-                color = Color(0xFF00FF00),
-                start = Offset(centerX, centerY),
-                end = Offset(endX, endY),
-                strokeWidth = 2f
-            )
         }
     }
 }

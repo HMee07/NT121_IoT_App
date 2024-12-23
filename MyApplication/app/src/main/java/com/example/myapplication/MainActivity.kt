@@ -35,6 +35,17 @@ import androidx.compose.foundation.pager.PagerState
 //import androidx.compose.foundation.pager.HorizontalPagerIndicator
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.VectorProperty.Stroke
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.screen.MappingScreen
 
 // Biến toàn cục dùng để up lên firebase
@@ -118,131 +129,159 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
     )
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .padding(16.dp)
-            .verticalScroll(scrollState), // Thêm khả năng cuộn
-
-        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.spacedBy(12.dp)
-        verticalArrangement = Arrangement.Center // Căn giữa theo chiều dọc
-
-    ) {
-        Text(
-            "Menu Chính",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            modifier = Modifier.padding(bottom = 32.dp) // Thêm khoảng cách với các thành phần bên dưới
-
+    Box {
+        Image(
+            painter = painterResource(id = R.drawable.bg_3),
+            contentDescription = "BG",
+            modifier = Modifier.fillMaxSize()
+                .width(2560.dp)
+                .height(1600.dp)
         )
-        //che do chon
-        // HorizontalPager để chọn chế độ
-        // HorizontalPager để chọn chế độ
-        HorizontalPager(
-            state = pagerState,
+
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp), // Tăng chiều cao để làm cho phần tử ở giữa nổi bật hơn
-            contentPadding = PaddingValues(horizontal = 32.dp),
+                .fillMaxSize()
+//                .background(Color.Black)
+                .padding(32.dp)
+                .verticalScroll(scrollState), // Thêm khả năng cuộn
 
-        ) { page ->
-            // Căn giữa từng phần tử trong HorizontalPager
-            Box(
-                modifier = Modifier
-                    .fillMaxSize(), // Bố cục ngang bằng toàn bộ trang
-                contentAlignment = Alignment.Center // Căn giữa nội dung trong mỗi trang
-            ) {
-            MenuOption(
-                imageRes = when (page) {
-                    0 -> R.drawable.radar_icon
-                    1 -> R.drawable.car_control
-                    2 -> R.drawable.draw_line
-                    3 -> R.drawable.avoid_icon
-                    4 -> R.drawable.remote_control
+            horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.Center // Căn giữa theo chiều dọc
 
-
-
-                    else -> R.drawable.line_tracking
-                },
-                label = when (page) {
-                    0 -> "Giao diện Radar"
-                    1 -> "Điều khiển xe và camera"
-                    2 -> "Vẽ đường đi"
-                    3 -> "Auto Mode"
-                    4 -> "Remote Control"
-
-
-
-                    else -> "Dò line"
-                },
-                onClick = {
-                    onNavigate(
-                        when (page) {
-                            0 -> Screen.Radar
-                            1 -> Screen.CarControl
-                            2 -> Screen.DrawLine
-                            3 -> Screen.ObstacleAvoidance
-                            4 -> Screen.RemoteControl
-
-
-                            else -> Screen.LineTracking
-                        }
-                    )
-                },
-                isSelected = pagerState.currentPage == page // Xác định trạng thái chọn
-            )
-                }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Nút điều hướng (Trái/Phải)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(
-                            (pagerState.currentPage - 1).coerceAtLeast(0)
-                        )
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-            ) {
-                Text("Trái", color = Color.White)
-            }
 
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(
-                            (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
-                        )
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-            ) {
-                Text("Phải", color = Color.White)
-            }
-        }
+            Text(
+                text = "MENU CHÍNH",
+                color = Color.White,
+                fontSize = 40.sp,
 
-        // Hiển thị chỉ số trang hiện tại
-        HorizontalPagerIndicator(
-            pagerState = pagerState,
-            activeColor = Color.White,
-            inactiveColor = Color.Gray,
-            modifier = Modifier
-                .align(
-                    Alignment.CenterHorizontally
+//                modifier = Modifier.shadow(8.dp, shape = RoundedCornerShape(4.dp)),
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Gray.copy(alpha = 0.5f),
+                        offset = Offset(4f, 4f),
+                        blurRadius = 6f
+                    ),
+
+                    brush = Brush.verticalGradient( // Sử dụng verticalGradient để áp dụng từ dưới lên trên
+                        colors = listOf(
+                            Color(0xFF30CFD0), // Màu #30cfd0
+                            Color(0xFF330867)  // Màu #330867
+                        )
+                    ),
+
 
                 )
-        )
+            )
+
+            //che do chon
+            // HorizontalPager để chọn chế độ
+            // HorizontalPager để chọn chế độ
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp), // Tăng chiều cao để làm cho phần tử ở giữa nổi bật hơn
+                contentPadding = PaddingValues(horizontal = 32.dp),
+
+                ) { page ->
+                // Căn giữa từng phần tử trong HorizontalPager
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(), // Bố cục ngang bằng toàn bộ trang
+                    contentAlignment = Alignment.Center // Căn giữa nội dung trong mỗi trang
+                ) {
+                    MenuOption(
+                        imageRes = when (page) {
+                            0 -> R.drawable.radar_icon
+                            1 -> R.drawable.car_control
+                            2 -> R.drawable.draw_line
+                            3 -> R.drawable.avoid_icon
+                            4 -> R.drawable.remote_control
+
+
+                            else -> R.drawable.line_tracking
+                        },
+                        label = when (page) {
+                            0 -> "Giao diện Radar"
+                            1 -> "Điều khiển xe và camera"
+                            2 -> "Vẽ đường đi"
+                            3 -> "Auto Mode"
+                            4 -> "Remote Control"
+
+
+                            else -> "Dò line"
+                        },
+                        onClick = {
+                            onNavigate(
+                                when (page) {
+                                    0 -> Screen.Radar
+                                    1 -> Screen.CarControl
+                                    2 -> Screen.DrawLine
+                                    3 -> Screen.ObstacleAvoidance
+                                    4 -> Screen.RemoteControl
+
+
+                                    else -> Screen.LineTracking
+                                }
+                            )
+                        },
+                        isSelected = pagerState.currentPage == page // Xác định trạng thái chọn
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+//            // Nút điều hướng (Trái/Phải)
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Button(
+//                    onClick = {
+//                        coroutineScope.launch {
+//                            pagerState.animateScrollToPage(
+//                                (pagerState.currentPage - 1).coerceAtLeast(0)
+//                            )
+//                        }
+//                    },
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+//                ) {
+//                    Text("Trái", color = Color.White)
+//                }
+//
+//                Button(
+//                    onClick = {
+//                        coroutineScope.launch {
+//                            pagerState.animateScrollToPage(
+//                                (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
+//                            )
+//                        }
+//                    },
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+//                ) {
+//                    Text("Phải", color = Color.White)
+//                }
+//            }
+
+            // Hiển thị chỉ số trang hiện tại
+            HorizontalPagerIndicator(
+                pagerState = pagerState,
+                activeColor = Color.White,
+                inactiveColor = Color.Gray,
+                modifier = Modifier
+                    .align(
+                        Alignment.CenterHorizontally
+
+                    )
+            )
+        }
     }
 }
+
     @Composable
     fun HorizontalPagerIndicator(
         pagerState: PagerState,
@@ -345,7 +384,7 @@ fun MenuItem(@DrawableRes imageRes: Int, label: String, onClick: () -> Unit) {
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(elevation),
             border = BorderStroke(2.dp, borderColor), // Viền nổi bật khi chọn
-            colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+            colors = CardDefaults.cardColors(containerColor = Color.DarkGray.copy(alpha = 0.7f))
         ) {
             Column(
                 modifier = Modifier
@@ -357,7 +396,7 @@ fun MenuItem(@DrawableRes imageRes: Int, label: String, onClick: () -> Unit) {
                 Image(
                     painter = painterResource(id = imageRes),
                     contentDescription = label,
-                    modifier = Modifier.size(150.dp)
+                    modifier = Modifier.size(250.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

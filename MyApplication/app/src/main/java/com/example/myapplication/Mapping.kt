@@ -177,18 +177,6 @@ fun MappingScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    // Đặt 'Mapping' thành false khi nhấn nút
-                                    FirebaseDatabase.getInstance()
-                                        .getReference("Interface/Mapping")
-                                        .setValue("false") // Sử dụng Boolean
-                                        .await()
-                                    Log.d("MappingScreen", "Successfully reset 'Mapping' to false")
-                                } catch (e: Exception) {
-                                    Log.e("MappingScreen", "Failed to reset 'Mapping' to false", e)
-                                }
-                            }
                             onNavigateBack() // Kích hoạt điều hướng trở lại
                         },
                         modifier = Modifier.background(Color.Transparent) // Làm nền trong suốt

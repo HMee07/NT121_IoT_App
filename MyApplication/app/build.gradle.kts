@@ -70,4 +70,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest.v150)
     implementation(libs.androidx.material3.v110)
 
+    //luot che do
+
+    implementation(libs.androidx.foundation) // Phiên bản mới nhất
+
+
+
 }

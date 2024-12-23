@@ -1,4 +1,6 @@
 [versions]
+accompanistPager = "0.30.1"
+accompanistPagerIndicators = "0.31.3-beta"
 activityComposeVersion = "1.8.2"
 agp = "8.7.2"
 androidxComposeMaterial3Material3 = "1.1.0"
@@ -43,6 +45,9 @@ uiVersion = "1.5.3"
 animationCore = "1.2.1"
 
 [libraries]
+accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
+accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPager" }
+accompanist-pager-indicators-v0313beta = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPagerIndicators" }
 androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
 androidx-compose-bom-v20230901 = { module = "androidx.compose:compose-bom", version.ref = "composeBomVersion" }
 androidx-compose-material3-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }

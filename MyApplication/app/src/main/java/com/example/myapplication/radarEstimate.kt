@@ -421,7 +421,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 16.dp)
-               )
+            )
             {
                 DisplayObjectInfo(radarDataList = radarDataList)
             }

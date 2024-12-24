@@ -183,6 +183,23 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
 
     val coroutineScope = rememberCoroutineScope()
 
+    fun resetData() {
+        val radarDataRef = database.getReference("Car_Support/Radar/Data")
+
+        val updates = mutableMapOf<String, Any>()
+        for (key in 10..170) { // Các key từ 10 đến 170
+            updates[key.toString()] = 0
+        }
+        radarDataRef.updateChildren(updates).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("ResetData", "Dữ liệu đã được làm mới thành công.")
+            } else {
+                task.exception?.let {
+                    Log.e("ResetData", "Lỗi khi làm mới dữ liệu: ${it.message}")
+                }
+            }
+        }
+    }
     // Hàm khởi động quét
     fun startMeasurement() {
         radarDataList = emptyList()
@@ -268,14 +285,16 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.icon_back3),
+                            painter = painterResource(id = R.drawable.ic_back),
                             contentDescription = "Back",
-                            tint = Color.Unspecified
+                            tint = Color.White
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
+                    containerColor =
+//                    Color(0xFF00CFCF)
+                            Color(0xFF48D1CC))// TopAppBar trong suốt            )
 
             )}
     ) { paddingValues ->
@@ -286,7 +305,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             // Hàng chứa các nút điều khiển, tiêu đề, sl vật thể
             Row(
                 modifier = Modifier
@@ -311,6 +330,24 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                         Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
                     }
                 }
+                //Cột bên trái: các nút điều khiển
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Button(
+                        onClick = { resetData() },
+                        enabled = !isScanning,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isScanning) Color.Gray else MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text( "Lam Moi")
+                    }
+                }
+
+
 
                 // Số lượng vật thể ở bên phải
                 val objects = groupObjects(radarDataList)

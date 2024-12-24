@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.VectorProperty.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -135,7 +136,8 @@ fun MainMenu(onNavigate: (Screen) -> Unit) {
             contentDescription = "BG",
             modifier = Modifier.fillMaxSize()
                 .width(2560.dp)
-                .height(1600.dp)
+                .height(1600.dp),
+            contentScale = ContentScale.FillBounds
         )
 
 

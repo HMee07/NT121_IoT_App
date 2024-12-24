@@ -129,21 +129,10 @@ fun autoModeScreen(onNavigateBack: () -> Unit) {
 
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Chế độ: Điều khiển tự động", color = Color.White, fontSize = 40.sp)
+                    Text("Chế Độ Tránh Vật Cản", color = Color.White, fontSize = 40.sp)
 
 
-                    Text(
-                        text = "Trạng thái xe",
-                        color = Color.White,
-                        fontSize = 40.sp
-                    )
 
-                    Text(
-                        text = carCommand.value,
-                        color = Color.LightGray,
-                        fontSize = 40.sp,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
                 }
             }
 

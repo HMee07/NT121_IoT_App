@@ -245,12 +245,29 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         // Nút Kèn
                         Button(
                             onClick = {
-                                controlRef.child("Ken_Xe").setValue("true")
+//                                controlRef.child("Ken_Xe").setValue("true")
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFFF3BD) // Màu vàng
                             ),
-                            modifier = Modifier.size(70.dp), // Đặt size để tạo hình tròn
+                            modifier = Modifier.size(70.dp)
+                                .pointerInteropFilter { motionEvent ->
+                                    when (motionEvent.action) {
+                                        android.view.MotionEvent.ACTION_DOWN -> {
+                                            // Gửi lệnh "3" khi nhấn giữ nút
+                                            Lenhref.child("Ken_Xe").setValue("1,")
+                                            true
+                                        }
+
+                                        android.view.MotionEvent.ACTION_UP -> {
+                                            // Gửi lệnh "3,0" khi thả nút
+                                            Lenhref.child("Ken_Xe").setValue("1,0")
+                                            true
+                                        }
+
+                                        else -> false
+                                    }
+                                }, // Đặt size để tạo hình tròn
                             shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
                         ) {
 
@@ -395,19 +412,22 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     }
                     // Nút chụp hình
                     Button(
-                        onClick = {},
+                        onClick = {
+                            controlRef.child("Chup_Hinh").setValue(1)},
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFB0B0B0) // Màu vàng nhạt
                         ),
-                        modifier = Modifier.size(70.dp), // Đặt size chiều rộng và cao bằng nhau để hình tròn
+                        modifier = Modifier
+                            .size(70.dp), // Đặt size chiều rộng và cao bằng nhau để hình tròn
                         shape = RoundedCornerShape(50) // Bo tròn 50 để tạo hình tròn
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.take_icon),
                             contentDescription = "Chụp",
-                            modifier = Modifier.fillMaxSize().size(90.dp).scale(2f)
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
+
 
                     // Hàng chứa các nút điều khiển
                     Row(

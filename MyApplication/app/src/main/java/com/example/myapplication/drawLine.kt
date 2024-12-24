@@ -67,7 +67,9 @@ fun drawLineScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
+                            controlRef.child("Duong_Di").setValue("0")
                             onNavigateBack()
+
                         }
                     ) {
                         Icon(

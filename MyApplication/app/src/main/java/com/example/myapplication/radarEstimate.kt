@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -294,7 +295,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor =
 //                    Color(0xFF00CFCF)
-                            Color(0xFF48D1CC))// TopAppBar trong suốt            )
+                            Color.DarkGray)// TopAppBar trong suốt            )
 
             )}
     ) { paddingValues ->
@@ -305,7 +306,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(56.dp))
             // Hàng chứa các nút điều khiển, tiêu đề, sl vật thể
             Row(
                 modifier = Modifier
@@ -327,7 +328,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                         ),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text(if (isScanning) "Đang quét..." else "Bắt đầu Đo")
+                        Text(if (isScanning) "Đang quét..." else "Bắt đầu quét")
                     }
                 }
                 //Cột bên trái: các nút điều khiển
@@ -343,7 +344,7 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                         ),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text( "Lam Moi")
+                        Text( "Làm Mới")
                     }
                 }
 
@@ -397,6 +398,12 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
+                        //HMEE them
+                        val backgroundColor: Color = Color(0xFF00151A) // Màu nền đen pha xanh
+                        val gridColor: Color = Color(0xFF00CFCF) // Màu lưới xanh nhạt
+                        val sweepColor: Brush = Brush.radialGradient( // Gradient cho tia quét
+                        colors = listOf(Color(0xFF00CFCF).copy(alpha = 0.8f), Color.Transparent)
+                        )
                         val centerX = size.width / 2
                         val centerY = size.height
                         val maxRadius = size.height / 1.2f
@@ -406,6 +413,8 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
                             val radius = (i / 5f) * maxRadius
                             drawArc(
                                 color = Color(0xFF00FF00),
+//                                color = gridColor.copy(alpha = 0.2f),
+
                                 startAngle = 180f,
                                 sweepAngle = 180f,
                                 useCenter = false,
@@ -427,6 +436,8 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
 
                             drawLine(
                                 color = Color(0xFF00FF00),
+//                                color = gridColor.copy(alpha = 0.5f),
+
                                 start = Offset(startX, startY),
                                 end = Offset(endX, endY),
                                 strokeWidth = if (angle % 30 == 0) 2f else 1f // Vạch chính dày hơn
@@ -452,6 +463,10 @@ fun RadarScreen(onNavigateBack: () -> Unit) {
 
                         // Hiệu ứng quét
                         drawArc(
+                            //hmme
+//                            brush = sweepColor,
+//                            color = gridColor.copy(alpha = 0.5f),
+
                             color = Color(0x2F00FF00), // Màu xanh lá nhạt
                             startAngle = 180f, // Bắt đầu từ 0 độ
                             sweepAngle = sweepAngle.value, // Giá trị quét động

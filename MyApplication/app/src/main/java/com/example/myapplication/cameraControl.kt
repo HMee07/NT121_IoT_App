@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -143,7 +144,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
+                            controlRef.child("Lenh").setValue("0")
                             onNavigateBack()
+
                         }
                     ) {
                         Icon(
@@ -154,84 +157,72 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
+                    containerColor = Color.Transparent
+                ) // TopAppBar trong suốt            )
 
-            )}
-    ) { paddingValues -> paddingValues
-
-    Box( modifier = Modifier
-        .fillMaxSize()
-//        .background(Color.Black)
-    ){
-        Image(
-            painter = painterResource(id = R.drawable.bg_2),
-            contentDescription = "BG",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds // Cắt ảnh để vừa khít màn hình
-
-        )
-
-        // Hiển thị video stream hoặc thông báo log
-        Box(
-            modifier = Modifier
-                .width(550.dp) // Kích thước Box cố định
-                .height(400.dp)
-                .align(Alignment.Center)
-                .background(Color.Gray) // Màu nền cho Box
-        ) {
-            imageBitmap.value?.let { bitmap ->
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = "Video Stream",
-                    modifier = Modifier.fillMaxSize() // Hiển thị đầy Box
-                )
-            } ?: Text(
-                text = logMessage.value, // Hiển thị log trạng thái
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.Center)
             )
         }
+    ) { paddingValues ->
+        paddingValues
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+//        .background(Color.Black)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.bg_2),
+                contentDescription = "BG",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds // Cắt ảnh để vừa khít màn hình
+
+            )
+
+
+            // Hiển thị video stream hoặc thông báo log
+            Box(
+                modifier = Modifier
+                    .width(550.dp) // Kích thước Box cố định
+                    .height(400.dp)
+                    .align(Alignment.Center)
+                    .background(Color.Gray) // Màu nền cho Box
+            ) {
+                imageBitmap.value?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = "Video Stream",
+                        modifier = Modifier.fillMaxSize() // Hiển thị đầy Box
+                    )
+                } ?: Text(
+                    text = logMessage.value, // Hiển thị log trạng thái
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+            }
 
 
             // Các nút điều khiển
-        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                //slider
-                // Slider Toc đo
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-//                                .align(Alignment.Start)  // Căn góc trên bên phải
-                        .padding(
-                            end = 16.dp,
-//                                        top = 16.dp
-                        ) // Đẩy Slider sát hơn vào bên phải
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Slider
-                    Slider(
-                        value = speedValue.value,
-                        onValueChange = { newValue ->
-                            speedValue.value = newValue
-                            controlRef.child("Toc_Do").setValue(newValue.toInt())
-                        },
-                        valueRange = 0f..100f,
-                        modifier = Modifier.width(150.dp).rotate(-90f)
-                            .padding(bottom = 20.dp)
-                            .padding(start = 24.dp)// Khoảng cách giữa Icon và Slider // Độ rộng Slider cố định
-                    )
-                    Spacer(modifier = Modifier.height(24.dp)) // Tạo khoảng trống giữa Slider và Icon
+//                Row(
+//                    verticalAlignment = Alignment.CenterVertically, // Đảm bảo các thành phần căn giữa theo chiều dọc
+//                    horizontalArrangement = Arrangement.spacedBy(16.dp) // Tạo khoảng cách giữa các thành phần
+//                ) {
 
+                    // Slider đèn
                     Row(
-                        verticalAlignment = Alignment.CenterVertically, // Đảm bảo các thành phần căn giữa theo chiều dọc
-                        horizontalArrangement = Arrangement.spacedBy(16.dp) // Tạo khoảng cách giữa các thành phần
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .align(Alignment.End)  // Căn góc trên bên phải
+                            .padding(end = 8.dp, top = 16.dp) // Đẩy Slider sát hơn vào bên phải
                     ) {
                         // Icon nhỏ hình cây đèn
                         Image(
@@ -241,44 +232,62 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 .size(90.dp)
                                 .padding(end = 0.dp) // Khoảng cách giữa Icon và Slider
                         )
-
-                        // Nút Kèn
-                        Button(
-                            onClick = {
-//                                controlRef.child("Ken_Xe").setValue("true")
+                        // Slider
+                        Slider(
+                            value = speedValue.value,
+                            onValueChange = { newValue ->
+                                speedValue.value = newValue
+                                controlRef.child("Toc_Do").setValue(newValue.toInt())
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFFF3BD) // Màu vàng
-                            ),
-                            modifier = Modifier.size(70.dp)
-                                .pointerInteropFilter { motionEvent ->
-                                    when (motionEvent.action) {
-                                        android.view.MotionEvent.ACTION_DOWN -> {
-                                            // Gửi lệnh "3" khi nhấn giữ nút
-                                            Lenhref.child("Ken_Xe").setValue("1,")
-                                            true
-                                        }
+                            valueRange = 0f..100f,
+                            modifier = Modifier.width(200.dp)
+                                .background(color = Color.DarkGray.copy(alpha = 0.7f))
+                        // Khoảng cách giữa Icon và Slider // Độ rộng Slider cố định
+                        )
+                        Spacer(modifier = Modifier.height(24.dp)) // Tạo khoảng trống giữa Slider và Icon
 
-                                        android.view.MotionEvent.ACTION_UP -> {
-                                            // Gửi lệnh "3,0" khi thả nút
-                                            Lenhref.child("Ken_Xe").setValue("1,0")
-                                            true
-                                        }
 
-                                        else -> false
-                                    }
-                                }, // Đặt size để tạo hình tròn
-                            shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
-                        ) {
 
-                            Image(
-                                painter = painterResource(id = R.drawable.horn_icon),
-                                contentDescription = "Kèn",
-                                modifier = Modifier.size(70.dp).padding(0.dp).scale(2f)
-                            )
-                        }
                     }
-                }
+
+                    // Nút Kèn
+                    Button(
+                        onClick = {
+//                                controlRef.child("Ken_Xe").setValue("true")
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFF3BD) // Màu vàng
+                        ),
+                        modifier = Modifier.size(70.dp)
+                            .pointerInteropFilter { motionEvent ->
+                                when (motionEvent.action) {
+                                    android.view.MotionEvent.ACTION_DOWN -> {
+                                        // Gửi lệnh "3" khi nhấn giữ nút
+                                        Lenhref.child("Ken_Xe").setValue("1,")
+                                        true
+                                    }
+
+                                    android.view.MotionEvent.ACTION_UP -> {
+                                        // Gửi lệnh "3,0" khi thả nút
+                                        Lenhref.child("Ken_Xe").setValue("1,0")
+                                        true
+                                    }
+
+                                    else -> false
+                                }
+                            }, // Đặt size để tạo hình tròn
+                        shape = RoundedCornerShape(50) // Bo tròn toàn bộ nút
+                    ) {
+
+                        Image(
+                            painter = painterResource(id = R.drawable.horn_icon),
+                            contentDescription = "Kèn",
+                            modifier = Modifier.size(70.dp).padding(0.dp).scale(2f)
+                        )
+                    }
+
+
+
 //                // Nút Kèn
 //                Button(
 //                    onClick = { controlRef.child("Ken_Xe").setValue("true") },
@@ -304,12 +313,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     Button(
                         onClick = {
 //                            controlRef.child("Cotrol/3").setValue("true")
-                                  },
+                        },
                         shape = RoundedCornerShape(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent.copy(
+                                alpha = 0f
+                            )
+                        ),
                         modifier = Modifier
-                            .width(70.dp)
-                            .height(90.dp)
+                            .width(150.dp)
+                            .height(190.dp)
                             .pointerInteropFilter { motionEvent ->
                                 when (motionEvent.action) {
                                     android.view.MotionEvent.ACTION_DOWN -> {
@@ -329,9 +342,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             }
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.icon_left),
+                            painter = painterResource(id = R.drawable.d_1),
                             contentDescription = "Trai",
-                            modifier = Modifier.size(70.dp).scale(4f)
+                            modifier = Modifier.size(90.dp).scale(2f)
                         )
                     }
 
@@ -339,12 +352,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     Button(
                         onClick = {
 //                            controlRef.child("Cotrol/4").setValue("true")
-                                  },
+                        },
                         shape = RoundedCornerShape(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent.copy(
+                                alpha = 0f
+                            )
+                        ),
                         modifier = Modifier
-                            .width(70.dp)
-                            .height(90.dp)
+                            .width(150.dp)
+                            .height(190.dp)
                             .pointerInteropFilter { motionEvent ->
                                 when (motionEvent.action) {
                                     android.view.MotionEvent.ACTION_DOWN -> {
@@ -364,9 +381,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             }
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.icon_right),
+                            painter = painterResource(id = R.drawable.r_1),
                             contentDescription = "Phai",
-                            modifier = Modifier.size(90.dp).scale(4f)
+                            modifier = Modifier.size(90.dp).scale(2f)
                         )
                     }
 
@@ -389,7 +406,7 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .align(Alignment.Start)  // Căn góc trên bên phải
+                            .align(Alignment.End)  // Căn góc trên bên phải
                             .padding(end = 8.dp, top = 16.dp) // Đẩy Slider sát hơn vào bên phải
                     ) {
                         // Icon nhỏ hình cây đèn
@@ -397,23 +414,27 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             painter = painterResource(id = R.drawable.light_icon),
                             contentDescription = "Light Icon",
                             modifier = Modifier
-                                .size(70.dp)
+                                .size(90.dp)
                                 .padding(end = 8.dp) // Khoảng cách giữa Icon và Slider
                         )
+
                         // Slider
                         Slider(
                             value = lightValue.value,
                             onValueChange = { newValue ->
                                 lightValue.value = newValue
-                                controlRef.child("Den_Xe").setValue(newValue.toInt()) },
+                                controlRef.child("Den_Xe").setValue(newValue.toInt())
+                            },
                             valueRange = 0f..100f,
-                            modifier = Modifier.width(110.dp) // Độ rộng Slider cố định
+                            modifier = Modifier.width(150.dp).background(color = Color.DarkGray.copy(alpha = 0.7f)) // Độ rộng Slider cố định
                         )
                     }
+
                     // Nút chụp hình
                     Button(
                         onClick = {
-                            controlRef.child("Chup_Hinh").setValue(1)},
+                            controlRef.child("Chup_Hinh").setValue(1)
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFB0B0B0) // Màu vàng nhạt
                         ),
@@ -424,9 +445,10 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Image(
                             painter = painterResource(id = R.drawable.take_icon),
                             contentDescription = "Chụp",
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().scale(3f).size(90.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.width(500.dp) )
 
 
                     // Hàng chứa các nút điều khiển
@@ -438,14 +460,14 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                         Button(
                             onClick = {
 //                                controlRef.child("Cotrol/0").setValue("true")
-                                      },
+                            },
                             shape = RoundedCornerShape(0.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.DarkGray.copy(alpha = 0.7f)
+                                containerColor = Color.Transparent.copy(alpha = 0f)
                             ),
                             modifier = Modifier
-                                .width(70.dp)
-                                .height(90.dp)
+                                .width(150.dp)
+                                .height(190.dp)
                                 .pointerInteropFilter { motionEvent ->
                                     when (motionEvent.action) {
                                         android.view.MotionEvent.ACTION_DOWN -> {
@@ -465,10 +487,10 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                 }
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.icon_stop),
+                                painter = painterResource(id = R.drawable.stop_1),
 
                                 contentDescription = "Dung",
-                                modifier = Modifier.fillMaxSize().size(90.dp).scale(4f)
+                                modifier = Modifier.fillMaxSize().scale(1.2f).size(90.dp)
                             )
                         }
 
@@ -480,12 +502,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             Button(
                                 onClick = {
 //                                    controlRef.child("Cotrol/1").setValue("true")
-                                          },
+                                },
                                 shape = RoundedCornerShape(0.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent.copy(
+                                        alpha = 0f
+                                    )
+                                ),
                                 modifier = Modifier
-                                    .width(75.dp)
-                                    .height(40.dp)
+                                    .width(150.dp)
+                                    .height(90.dp)
                                     .pointerInteropFilter { motionEvent ->
                                         when (motionEvent.action) {
                                             android.view.MotionEvent.ACTION_DOWN -> {
@@ -505,9 +531,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                                     }
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.icon_up),
+                                    painter = painterResource(id = R.drawable.l_1),
                                     contentDescription = "Tien",
-                                    modifier = Modifier.fillMaxSize().size(90.dp).scale(3f)
+                                    modifier = Modifier.fillMaxSize().scale(1.5f).size(90.dp)
                                 )
                             }
 
@@ -515,12 +541,16 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
                             Button(
                                 onClick = {
 //                                    controlRef.child("Cotrol/2").setValue("true")
-                                          },
+                                },
                                 shape = RoundedCornerShape(0.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray.copy(alpha = 0.7f)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent.copy(
+                                        alpha = 0f
+                                    )
+                                ),
                                 modifier = Modifier
-                                    .width(75.dp)
-                                    .height(40.dp)
+                                    .width(150.dp)
+                                    .height(90.dp)
                                     .pointerInteropFilter { motionEvent ->
                                         when (motionEvent.action) {
                                             android.view.MotionEvent.ACTION_DOWN -> {
@@ -542,9 +572,9 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
 
                             {
                                 Image(
-                                    painter = painterResource(id = R.drawable.icon_downpng),
+                                    painter = painterResource(id = R.drawable.upl_1),
                                     contentDescription = "Lui",
-                                    modifier = Modifier.fillMaxSize().size(90.dp).scale(3f)
+                                    modifier = Modifier.fillMaxSize().size(90.dp).scale(1.5f)
                                 )
                             }
                         }
@@ -553,5 +583,5 @@ fun CarControlScreen(onNavigateBack: () -> Unit) {
             }
         }
     }
-    }
+}
 }

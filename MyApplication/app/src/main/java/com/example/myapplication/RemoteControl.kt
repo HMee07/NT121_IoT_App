@@ -58,11 +58,7 @@ import kotlin.math.sin
 @Composable
 fun RemoteScreen(onNavigateBack: () -> Unit) {
 
-
-    val coroutineScope = rememberCoroutineScope()
-
     var carCommand = remember { mutableStateOf("Đang dừng") } // Trạng thái lệnh (mặc định)
-
 
     // Lắng nghe lệnh từ Firebase
     LaunchedEffect(Unit) {
@@ -98,7 +94,7 @@ fun RemoteScreen(onNavigateBack: () -> Unit) {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.icon_back3),
+                            painter = painterResource(id = R.drawable.icon_back),
                             contentDescription = "Back",
                             tint = Color.Unspecified
                         )

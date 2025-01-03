@@ -84,7 +84,7 @@ fun lineTrackingScreen(onNavigateBack: () -> Unit) {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.icon_back3), // Đảm bảo `ic_back` tồn tại
+                            painter = painterResource(id = R.drawable.icon_back), // Đảm bảo `ic_back` tồn tại
                             contentDescription = "Back",
                             tint = Color.Unspecified
                         )

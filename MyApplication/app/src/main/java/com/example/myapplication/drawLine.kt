@@ -73,19 +73,17 @@ fun drawLineScreen(onNavigateBack: () -> Unit) {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.icon_back3),
+                            painter = painterResource(id = R.drawable.icon_back2),
                             contentDescription = "Back",
                             tint = Color.Unspecified
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent) // TopAppBar trong suốt            )
+                    containerColor = Color.Gray) // TopAppBar trong suốt
 
             )}
-    ) { paddingValues ->
-        paddingValues
-
+    ) { paddingValues -> paddingValues
 
         Column(
             modifier = Modifier
@@ -93,21 +91,20 @@ fun drawLineScreen(onNavigateBack: () -> Unit) {
                 .background(Color.Black)
                 .padding(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-            // Hàng chứa nút "Trở về", "Xóa", và "Gửi"
+            // Hàng chứa nút "Làm mới" và "Gửi"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.End
             ) {
-
-
-                Button(onClick = { pathPoints = emptyList() }) {
+                Button(onClick = { pathPoints = emptyList() },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
                     Text("Làm mới")
                 }
-
                 Button(onClick = {
                     val commands = convertPathToCommands(pathPoints)
                     val database = FirebaseDatabase.getInstance()
@@ -125,11 +122,7 @@ fun drawLineScreen(onNavigateBack: () -> Unit) {
             if (showMessage) {
                 val commands = convertPathToCommands(pathPoints)
                 Text(
-                    text = "Đường đi đã được gửi thành công! Dữ liệu gửi đi: ${
-                        commands.joinToString(
-                            ","
-                        )
-                    }",
+                    text = "Đường đi đã được gửi thành công!",
                     color = Color.Green,
                     modifier = Modifier
                         .fillMaxWidth()
